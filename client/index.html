@@ -123,7 +123,27 @@
 </div>
 
 <div class="drop" id="drop">
-  Drag & drop files here
+  Drag files anywhere to upload
+</div>
+
+<div id="uploadStatus" style="
+  display:none;
+  background:#111827;
+  color:#fff;
+  padding:10px;
+  border-radius:8px;
+  margin-top:10px;
+  font-size:13px;
+">
+  <div id="uploadText">Uploading...</div>
+  <div style="background:#374151;height:6px;border-radius:4px;margin-top:6px;">
+    <div id="uploadBar" style="
+      width:0%;
+      height:6px;
+      background:#10b981;
+      border-radius:4px;
+    "></div>
+  </div>
 </div>
 
 <div id="items"></div>
@@ -241,7 +261,8 @@ async function sendText(){
 }
 
 function handleEnter(e){
-  if(e.key === "Enter"){
+  if(e.key === "Enter" && !e.shiftKey){
+    e.preventDefault();
     sendText();
   }
 }
@@ -255,13 +276,10 @@ function changeName(){
 }
 
 const fileInput=document.getElementById("fileInput");
-fileInput.onchange=async ()=>{
-  const file=fileInput.files[0];
-  const form=new FormData();
-  form.append("file",file);
-  form.append("channel",channel);
-  form.append("uploader",uploader);
-  await fetch("/upload",{method:"POST",body:form});
+
+fileInput.onchange = ()=>{
+  const file = fileInput.files[0];
+  if(file) uploadFile(file);
 };
 
 async function del(id){
@@ -312,6 +330,45 @@ document.addEventListener("paste", async e=>{
   });
 });
 
+function uploadFile(file){
+  const status = document.getElementById("uploadStatus");
+  const bar = document.getElementById("uploadBar");
+  const text = document.getElementById("uploadText");
+
+  status.style.display = "block";
+  bar.style.width = "0%";
+  text.innerText = "Uploading: " + file.name;
+
+  const form = new FormData();
+  form.append("file", file);
+  form.append("channel", channel);
+  form.append("uploader", uploader);
+
+  const xhr = new XMLHttpRequest();
+  xhr.open("POST", "/upload", true);
+
+  xhr.upload.onprogress = e=>{
+    if(e.lengthComputable){
+      const percent = Math.round((e.loaded / e.total) * 100);
+      bar.style.width = percent + "%";
+    }
+  };
+
+  xhr.onload = ()=>{
+    status.style.display = "none";
+    fileInput.value = "";   // reset picker
+    load();
+  };
+
+  xhr.onerror = ()=>{
+    status.style.display = "none";
+    alert("Upload failed");
+  };
+
+  xhr.send(form);
+}
+
+
 const overlay = document.getElementById("dragOverlay");
 let dragCounter = 0;
 
@@ -350,10 +407,7 @@ document.addEventListener("drop", async e=>{
   form.append("channel", channel);
   form.append("uploader", uploader);
 
-  await fetch("/upload", {
-    method:"POST",
-    body:form
-  });
+  uploadFile(file);
 });
 
 load();
