@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Instbyte</title>
+  <style>
+    body { font-family: Arial; background:#f5f6f8; margin:0 }
+    header { background:#111; color:#fff; padding:12px 20px }
+    .container { max-width:900px; margin:20px auto }
+    .drop { border:2px dashed #ccc; padding:30px; text-align:center; background:#fff }
+    .item { background:#fff; padding:12px; margin-top:10px; border-radius:6px }
+    .channels button { margin-right:8px }
+  </style>
+</head>
+<body>
+
+<header>Instbyte</header>
+
+<div class="container">
+
+<div class="channels">
+  <button onclick="setChannel('general')">General</button>
+  <button onclick="setChannel('dev')">Dev</button>
+  <button onclick="setChannel('design')">Design</button>
+  <button onclick="setChannel('temp')">Temp</button>
+</div>
+
+<div class="drop" id="drop">
+  Drag file or paste text
+</div>
+
+<div id="items"></div>
+
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+let channel = "general";
+let uploader = localStorage.getItem("name") || prompt("Your name?");
+localStorage.setItem("name", uploader);
+
+function setChannel(c){
+  channel = c;
+  load();
+}
+
+async function load(){
+  const res = await fetch("/items/"+channel);
+  const data = await res.json();
+  render(data);
+}
+
+function render(data){
+  const el = document.getElementById("items");
+  el.innerHTML = "";
+  data.forEach(i=>{
+    const div = document.createElement("div");
+    div.className="item";
+
+    if(i.type==="file"){
+      div.innerHTML = `<a href="/uploads/${i.filename}" target="_blank">${i.filename}</a>`;
+    } else {
+      div.textContent = i.content;
+    }
+
+    el.appendChild(div);
+  });
+}
+
+socket.on("new-item", item=>{
+  if(item.channel===channel) load();
+});
+
+/* PASTE TEXT */
+document.addEventListener("paste", async e=>{
+  const text = e.clipboardData.getData("text");
+  if(text){
+    await fetch("/text",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ content:text, channel, uploader })
+    });
+  }
+});
+
+/* DROP FILE */
+const drop = document.getElementById("drop");
+
+drop.addEventListener("dragover", e=> e.preventDefault());
+
+drop.addEventListener("drop", async e=>{
+  e.preventDefault();
+  const file = e.dataTransfer.files[0];
+
+  const form = new FormData();
+  form.append("file", file);
+  form.append("channel", channel);
+  form.append("uploader", uploader);
+
+  await fetch("/upload", { method:"POST", body:form });
+});
+
+load();
+</script>
+
+</body>
+</html>
