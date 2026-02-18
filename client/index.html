@@ -89,7 +89,18 @@
 </head>
 <body>
 
-<header>Instbyte</header>
+<header style="display:flex;justify-content:space-between;align-items:center">
+  <div>Instbyte</div>
+
+  <div style="font-size:13px">
+    <span id="who"></span>
+    <button onclick="changeName()" style="margin-left:8px;background:#374151;padding:6px 10px;font-size:12px">
+      change
+    </button>
+  </div>
+</header>
+
+
 
 <div class="container">
 
@@ -100,8 +111,12 @@
   <button onclick="setChannel('temp')" id="ch-temp">Temp</button>
 </div>
 
+<div style="margin-top:10px;">
+  <input id="search" placeholder="Search…" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd">
+</div>
+
 <div class="composer">
-  <input id="msg" placeholder="Type message or paste link"/>
+  <input id="msg" placeholder="Type message or paste link" onkeydown="handleEnter(event)"/>
   <button onclick="sendText()">Send</button>
   <input type="file" id="fileInput" hidden>
   <button onclick="fileInput.click()">Upload</button>
@@ -121,10 +136,14 @@ const socket = io();
 let channel = "general";
 
 let uploader = localStorage.getItem("name");
-if(!uploader){
+
+if(!uploader || uploader === "null" || uploader.trim() === ""){
   uploader = prompt("Your name?");
+  if(!uploader) uploader = "anon";
   localStorage.setItem("name", uploader);
 }
+
+document.getElementById("who").innerText = "You: " + uploader;
 
 function highlight(){
   document.querySelectorAll(".channels button")
@@ -134,6 +153,7 @@ function highlight(){
 
 function setChannel(c){
   channel=c;
+  document.getElementById("search").value="";
   highlight();
   load();
 }
@@ -149,28 +169,47 @@ async function load(){
 function render(data){
   const el=document.getElementById("items");
   el.innerHTML="";
+
   data.forEach(i=>{
     const div=document.createElement("div");
     div.className="item";
 
     let content="";
+
     if(i.type==="file"){
-      content=`<a href="/uploads/${i.filename}" target="_blank">${i.filename}</a>`;
+      const isImg = i.filename.match(/\.(jpg|png|jpeg|gif)$/i);
+      if(isImg){
+        content=`<img src="/uploads/${i.filename}" style="max-width:200px;border-radius:6px"><br>
+        <a href="/uploads/${i.filename}" target="_blank">${i.filename}</a>`;
+      }else{
+        content=`<a href="/uploads/${i.filename}" target="_blank">${i.filename}</a>`;
+      }
     }else{
-      content=i.content;
+      const isLink = i.content.startsWith("http");
+      if(isLink){
+        content=`<a href="${i.content}" target="_blank">${i.content}</a>`;
+      }else{
+        content=i.content;
+      }
     }
+
+    const pinText = i.pinned ? "unpin" : "pin";
 
     div.innerHTML=`
       <div class="left">
         ${content}
         <div class="meta">${i.uploader}</div>
       </div>
-      <button class="del" onclick="del(${i.id})">delete</button>
+      <div>
+        <button onclick="pin(${i.id})">${pinText}</button>
+        <button class="del" onclick="del(${i.id})">delete</button>
+      </div>
     `;
 
     el.appendChild(div);
   });
 }
+
 
 async function sendText(){
   const input=document.getElementById("msg");
@@ -184,6 +223,20 @@ async function sendText(){
   });
 
   input.value="";
+}
+
+function handleEnter(e){
+  if(e.key === "Enter"){
+    sendText();
+  }
+}
+
+function changeName(){
+  const n = prompt("Enter name:");
+  if(!n) return;
+  uploader = n;
+  localStorage.setItem("name", n);
+  document.getElementById("who").innerText = "You: " + uploader;
 }
 
 const fileInput=document.getElementById("fileInput");
@@ -214,12 +267,48 @@ async function del(id){
   await fetch("/item/"+id,{method:"DELETE"});
 }
 
+async function pin(id){
+  await fetch("/pin/"+id,{method:"POST"});
+  load();
+}
+
 socket.on("new-item", item=>{
   if(item.channel===channel) load();
 });
 
 socket.on("delete-item", id=>{
   load();
+});
+
+document.getElementById("search").addEventListener("input", async e=>{
+  const q=e.target.value.trim();
+  if(!q){
+    load();
+    return;
+  }
+  const res=await fetch(`/search/${channel}/${q}`);
+  const data=await res.json();
+  render(data);
+});
+
+document.addEventListener("paste", async e=>{
+  const active = document.activeElement;
+
+  // if user is typing in input, don't auto-send
+  if(active && active.id === "msg") return;
+
+  const text = e.clipboardData.getData("text");
+  if(!text) return;
+
+  await fetch("/text",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      content:text,
+      channel,
+      uploader
+    })
+  });
 });
 
 load();

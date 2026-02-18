@@ -95,17 +95,44 @@ app.delete("/item/:id", (req, res) => {
   });
 });
 
+/* PIN */
+app.post("/pin/:id", (req, res) => {
+  const id = req.params.id;
+
+  db.run(
+    `UPDATE items SET pinned = CASE WHEN pinned=1 THEN 0 ELSE 1 END WHERE id=?`,
+    [id],
+    () => {
+      io.emit("pin-update");
+      res.sendStatus(200);
+    }
+  );
+});
+
 
 /* GET ITEMS */
 app.get("/items/:channel", (req, res) => {
   const channel = req.params.channel;
 
   db.all(
-    `SELECT * FROM items WHERE channel=? ORDER BY created_at DESC`,
+    `SELECT * FROM items WHERE channel=? ORDER BY pinned DESC, created_at DESC`,
     [channel],
     (err, rows) => {
       res.json(rows);
     }
+  );
+});
+
+/* SEARCH */
+app.get("/search/:channel/:q", (req, res) => {
+  const { channel, q } = req.params;
+
+  db.all(
+    `SELECT * FROM items 
+     WHERE channel=? AND (content LIKE ? OR filename LIKE ?)
+     ORDER BY pinned DESC, created_at DESC`,
+    [channel, `%${q}%`, `%${q}%`],
+    (err, rows) => res.json(rows)
   );
 });
 

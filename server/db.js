@@ -14,9 +14,11 @@ db.serialize(() => {
       filename TEXT,
       channel TEXT,
       uploader TEXT,
+      pinned INTEGER DEFAULT 0,
       created_at INTEGER
     )
   `);
 });
+
 
 module.exports = db;
