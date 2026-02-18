@@ -130,6 +130,21 @@
 
 </div>
 
+<div id="dragOverlay" style="
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.55);
+  color:#fff;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  font-size:28px;
+  z-index:9999;
+  pointer-events:none;
+">
+  Drop to upload
+</div>
+
 <script src="/socket.io/socket.io.js"></script>
 <script>
 const socket = io();
@@ -249,20 +264,6 @@ fileInput.onchange=async ()=>{
   await fetch("/upload",{method:"POST",body:form});
 };
 
-const drop=document.getElementById("drop");
-
-drop.addEventListener("dragover",e=>e.preventDefault());
-
-drop.addEventListener("drop",async e=>{
-  e.preventDefault();
-  const file=e.dataTransfer.files[0];
-  const form=new FormData();
-  form.append("file",file);
-  form.append("channel",channel);
-  form.append("uploader",uploader);
-  await fetch("/upload",{method:"POST",body:form});
-});
-
 async function del(id){
   await fetch("/item/"+id,{method:"DELETE"});
 }
@@ -308,6 +309,50 @@ document.addEventListener("paste", async e=>{
       channel,
       uploader
     })
+  });
+});
+
+const overlay = document.getElementById("dragOverlay");
+let dragCounter = 0;
+
+/* DRAG ENTER */
+document.addEventListener("dragenter", e=>{
+  e.preventDefault();
+  dragCounter++;
+  overlay.style.display="flex";
+});
+
+/* DRAG LEAVE */
+document.addEventListener("dragleave", e=>{
+  dragCounter--;
+  if(dragCounter<=0){
+    overlay.style.display="none";
+    dragCounter=0;
+  }
+});
+
+/* DRAG OVER */
+document.addEventListener("dragover", e=>{
+  e.preventDefault();
+});
+
+/* DROP ANYWHERE */
+document.addEventListener("drop", async e=>{
+  e.preventDefault();
+  overlay.style.display="none";
+  dragCounter=0;
+
+  const file = e.dataTransfer.files[0];
+  if(!file) return;
+
+  const form = new FormData();
+  form.append("file", file);
+  form.append("channel", channel);
+  form.append("uploader", uploader);
+
+  await fetch("/upload", {
+    method:"POST",
+    body:form
   });
 });
 
