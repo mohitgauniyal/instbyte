@@ -2,7 +2,10 @@
 <html>
 <head>
   <title>Instbyte</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16.png">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+
   <style>
     body{
       font-family: system-ui;
@@ -10,12 +13,11 @@
       margin:0;
     }
     header{
-      background:#111827;
-      color:#fff;
-      padding:14px 20px;
-      font-weight:600;
-      letter-spacing:.5px;
-    }
+  background:#ffffff;
+  color:#111827;
+  padding:14px 20px;
+  border-bottom:1px solid #e5e7eb;
+}
     .container{
       max-width:900px;
       margin:20px auto;
@@ -115,7 +117,12 @@
 <body>
 
 <header style="display:flex;justify-content:space-between;align-items:center">
-  <div>Instbyte</div>
+  <div style="display:flex;align-items:center;gap:10px;">
+  <img src="/assets/logo.png" style="height:26px">
+  <span style="color:#111827">Instbyte</span>
+
+</div>
+
 
   <div style="font-size:13px">
     <span id="who"></span>
