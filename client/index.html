@@ -80,11 +80,36 @@
       max-width:70%;
       word-break:break-word;
     }
-    .del{
-      background:#ef4444;
-      padding:6px 10px;
-      font-size:12px;
-    }
+
+    .item-actions{
+  display:flex;
+  gap:8px;
+}
+
+.icon-btn{
+  background:#f3f4f6;
+  border:1px solid #e5e7eb;
+  border-radius:6px;
+  padding:6px 8px;
+  cursor:pointer;
+  font-size:14px;
+  line-height:1;
+}
+
+.icon-btn:hover{
+  background:#e5e7eb;
+}
+
+.icon-btn.delete{
+  color:#b91c1c;
+  border-color:#fecaca;
+  background:#fff;
+}
+
+.icon-btn.delete:hover{
+  background:#fee2e2;
+}
+
   </style>
 </head>
 <body>
@@ -168,6 +193,7 @@
 <script src="/socket.io/socket.io.js"></script>
 <script>
 const socket = io();
+
 let channel = "general";
 
 let uploader = localStorage.getItem("name");
@@ -179,6 +205,7 @@ if(!uploader || uploader === "null" || uploader.trim() === ""){
 }
 
 document.getElementById("who").innerText = "You: " + uploader;
+socket.emit("join", uploader);
 
 function highlight(){
   document.querySelectorAll(".channels button")
@@ -235,10 +262,14 @@ function render(data){
         ${content}
         <div class="meta">${i.uploader}</div>
       </div>
-      <div>
-        <button onclick="pin(${i.id})">${pinText}</button>
-        <button class="del" onclick="del(${i.id})">delete</button>
-      </div>
+      <div class="item-actions">
+  <button class="icon-btn" onclick="pin(${i.id})" title="pin">
+    ${i.pinned ? "📍" : "📌"}
+  </button>
+  <button class="icon-btn delete" onclick="del(${i.id})" title="delete">
+    🗑
+  </button>
+</div>
     `;
 
     el.appendChild(div);

@@ -1,5 +1,6 @@
 require("./cleanup");
 const fs = require("fs");
+const os = require("os");
 
 const express = require("express");
 const http = require("http");
@@ -109,7 +110,6 @@ app.post("/pin/:id", (req, res) => {
   );
 });
 
-
 /* GET ITEMS */
 app.get("/items/:channel", (req, res) => {
   const channel = req.params.channel;
@@ -136,11 +136,53 @@ app.get("/search/:channel/:q", (req, res) => {
   );
 });
 
-/* SOCKET */
-io.on("connection", () => {
-  console.log("user connected");
+
+
+/* ============================
+   SOCKET CONNECTION LOGGING
+============================ */
+
+let connectedUsers = 0;
+
+io.on("connection", (socket) => {
+  connectedUsers++;
+
+  let username = "Unknown";
+
+  socket.on("join", (name) => {
+    username = name || "Unknown";
+    console.log(username + " connected | total:", connectedUsers);
+  });
+
+  socket.on("disconnect", () => {
+    connectedUsers--;
+    console.log(username + " disconnected | total:", connectedUsers);
+  });
 });
 
-server.listen(3000, () => {
-  console.log("Instbyte running on http://localhost:3000");
+
+/* ============================
+   SHOW LOCAL + LAN URL
+============================ */
+
+function getLocalIP(){
+  const nets = os.networkInterfaces();
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name]) {
+      if (net.family === "IPv4" && !net.internal) {
+        return net.address;
+      }
+    }
+  }
+  return "localhost";
+}
+
+const PORT = 3000;
+const localIP = getLocalIP();
+
+server.listen(PORT, () => {
+  console.log("\nInstbyte running");
+  console.log("Local:   http://localhost:" + PORT);
+  console.log("Network: http://" + localIP + ":" + PORT);
+  console.log("");
 });
