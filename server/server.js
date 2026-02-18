@@ -1,4 +1,5 @@
 require("./cleanup");
+const fs = require("fs");
 
 const express = require("express");
 const http = require("http");
@@ -74,6 +75,26 @@ app.post("/text", (req, res) => {
     }
   );
 });
+
+/* DELETE ITEM */
+app.delete("/item/:id", (req, res) => {
+  const id = req.params.id;
+
+  db.get(`SELECT * FROM items WHERE id=?`, [id], (err, item) => {
+    if (!item) return res.sendStatus(404);
+
+    if (item.filename) {
+      const filePath = path.join(__dirname, "../uploads", item.filename);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    }
+
+    db.run(`DELETE FROM items WHERE id=?`, [id], () => {
+      io.emit("delete-item", id);
+      res.sendStatus(200);
+    });
+  });
+});
+
 
 /* GET ITEMS */
 app.get("/items/:channel", (req, res) => {

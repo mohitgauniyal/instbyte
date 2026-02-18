@@ -2,13 +2,89 @@
 <html>
 <head>
   <title>Instbyte</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
-    body { font-family: Arial; background:#f5f6f8; margin:0 }
-    header { background:#111; color:#fff; padding:12px 20px }
-    .container { max-width:900px; margin:20px auto }
-    .drop { border:2px dashed #ccc; padding:30px; text-align:center; background:#fff }
-    .item { background:#fff; padding:12px; margin-top:10px; border-radius:6px }
-    .channels button { margin-right:8px }
+    body{
+      font-family: system-ui;
+      background:#f3f4f6;
+      margin:0;
+    }
+    header{
+      background:#111827;
+      color:#fff;
+      padding:14px 20px;
+      font-weight:600;
+      letter-spacing:.5px;
+    }
+    .container{
+      max-width:900px;
+      margin:20px auto;
+      padding:0 12px;
+    }
+    .channels button{
+      margin-right:8px;
+      padding:8px 14px;
+      border:none;
+      background:#e5e7eb;
+      cursor:pointer;
+      border-radius:6px;
+    }
+    .channels .active{
+      background:#111827;
+      color:#fff;
+    }
+    .composer{
+      background:#fff;
+      padding:12px;
+      border-radius:8px;
+      margin-top:12px;
+      display:flex;
+      gap:8px;
+    }
+    input[type=text]{
+      flex:1;
+      padding:10px;
+      border:1px solid #ddd;
+      border-radius:6px;
+    }
+    button{
+      padding:10px 14px;
+      border:none;
+      background:#111827;
+      color:#fff;
+      border-radius:6px;
+      cursor:pointer;
+    }
+    .drop{
+      border:2px dashed #ccc;
+      padding:18px;
+      margin-top:12px;
+      text-align:center;
+      background:#fff;
+      border-radius:8px;
+    }
+    .item{
+      background:#fff;
+      padding:12px;
+      margin-top:10px;
+      border-radius:8px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+    }
+    .meta{
+      font-size:12px;
+      color:#6b7280;
+    }
+    .left{
+      max-width:70%;
+      word-break:break-word;
+    }
+    .del{
+      background:#ef4444;
+      padding:6px 10px;
+      font-size:12px;
+    }
   </style>
 </head>
 <body>
@@ -18,14 +94,21 @@
 <div class="container">
 
 <div class="channels">
-  <button onclick="setChannel('general')">General</button>
-  <button onclick="setChannel('dev')">Dev</button>
-  <button onclick="setChannel('design')">Design</button>
-  <button onclick="setChannel('temp')">Temp</button>
+  <button onclick="setChannel('general')" id="ch-general">General</button>
+  <button onclick="setChannel('dev')" id="ch-dev">Dev</button>
+  <button onclick="setChannel('design')" id="ch-design">Design</button>
+  <button onclick="setChannel('temp')" id="ch-temp">Temp</button>
+</div>
+
+<div class="composer">
+  <input id="msg" placeholder="Type message or paste link"/>
+  <button onclick="sendText()">Send</button>
+  <input type="file" id="fileInput" hidden>
+  <button onclick="fileInput.click()">Upload</button>
 </div>
 
 <div class="drop" id="drop">
-  Drag file or paste text
+  Drag & drop files here
 </div>
 
 <div id="items"></div>
@@ -36,13 +119,26 @@
 <script>
 const socket = io();
 let channel = "general";
-let uploader = localStorage.getItem("name") || prompt("Your name?");
-localStorage.setItem("name", uploader);
+
+let uploader = localStorage.getItem("name");
+if(!uploader){
+  uploader = prompt("Your name?");
+  localStorage.setItem("name", uploader);
+}
+
+function highlight(){
+  document.querySelectorAll(".channels button")
+    .forEach(b=>b.classList.remove("active"));
+  document.getElementById("ch-"+channel).classList.add("active");
+}
 
 function setChannel(c){
-  channel = c;
+  channel=c;
+  highlight();
   load();
 }
+
+highlight();
 
 async function load(){
   const res = await fetch("/items/"+channel);
@@ -51,53 +147,79 @@ async function load(){
 }
 
 function render(data){
-  const el = document.getElementById("items");
-  el.innerHTML = "";
+  const el=document.getElementById("items");
+  el.innerHTML="";
   data.forEach(i=>{
-    const div = document.createElement("div");
+    const div=document.createElement("div");
     div.className="item";
 
+    let content="";
     if(i.type==="file"){
-      div.innerHTML = `<a href="/uploads/${i.filename}" target="_blank">${i.filename}</a>`;
-    } else {
-      div.textContent = i.content;
+      content=`<a href="/uploads/${i.filename}" target="_blank">${i.filename}</a>`;
+    }else{
+      content=i.content;
     }
+
+    div.innerHTML=`
+      <div class="left">
+        ${content}
+        <div class="meta">${i.uploader}</div>
+      </div>
+      <button class="del" onclick="del(${i.id})">delete</button>
+    `;
 
     el.appendChild(div);
   });
+}
+
+async function sendText(){
+  const input=document.getElementById("msg");
+  const text=input.value.trim();
+  if(!text) return;
+
+  await fetch("/text",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({content:text,channel,uploader})
+  });
+
+  input.value="";
+}
+
+const fileInput=document.getElementById("fileInput");
+fileInput.onchange=async ()=>{
+  const file=fileInput.files[0];
+  const form=new FormData();
+  form.append("file",file);
+  form.append("channel",channel);
+  form.append("uploader",uploader);
+  await fetch("/upload",{method:"POST",body:form});
+};
+
+const drop=document.getElementById("drop");
+
+drop.addEventListener("dragover",e=>e.preventDefault());
+
+drop.addEventListener("drop",async e=>{
+  e.preventDefault();
+  const file=e.dataTransfer.files[0];
+  const form=new FormData();
+  form.append("file",file);
+  form.append("channel",channel);
+  form.append("uploader",uploader);
+  await fetch("/upload",{method:"POST",body:form});
+});
+
+async function del(id){
+  await fetch("/item/"+id,{method:"DELETE"});
 }
 
 socket.on("new-item", item=>{
   if(item.channel===channel) load();
 });
 
-/* PASTE TEXT */
-document.addEventListener("paste", async e=>{
-  const text = e.clipboardData.getData("text");
-  if(text){
-    await fetch("/text",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({ content:text, channel, uploader })
-    });
-  }
-});
-
-/* DROP FILE */
-const drop = document.getElementById("drop");
-
-drop.addEventListener("dragover", e=> e.preventDefault());
-
-drop.addEventListener("drop", async e=>{
-  e.preventDefault();
-  const file = e.dataTransfer.files[0];
-
-  const form = new FormData();
-  form.append("file", file);
-  form.append("channel", channel);
-  form.append("uploader", uploader);
-
-  await fetch("/upload", { method:"POST", body:form });
+socket.on("delete-item", id=>{
+  load();
 });
 
 load();
