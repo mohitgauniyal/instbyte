@@ -626,9 +626,11 @@
       const res = await fetch("/channels");
       const data = await res.json();
       channels = data.map(c => c.name);
+      if (!channel && channels.length) channel = channels[0];
       renderChannels();
       highlight();
     }
+
     function renderChannels() {
       const container = document.getElementById("channels");
       container.innerHTML = "";
@@ -741,8 +743,6 @@
 
     (async function init() {
       await loadChannels();
-      channel = channels[0];
-      highlight();
       load();
     })();
   </script>
