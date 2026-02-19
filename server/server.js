@@ -1,6 +1,7 @@
 require("./cleanup");
 const fs = require("fs");
 const os = require("os");
+const net = require("net");
 
 const express = require("express");
 const http = require("http");
@@ -241,12 +242,28 @@ function getLocalIP() {
   return "localhost";
 }
 
-const PORT = 3000;
+function findFreePort(start) {
+  return new Promise((resolve) => {
+    const srv = net.createServer();
+    srv.listen(start, () => {
+      const port = srv.address().port;
+      srv.close(() => resolve(port));
+    });
+    srv.on("error", () => resolve(findFreePort(start + 1)));
+  });
+}
+
+const PREFERRED = parseInt(process.env.PORT) || 3000;
 const localIP = getLocalIP();
 
-server.listen(PORT, () => {
-  console.log("\nInstbyte running");
-  console.log("Local:   http://localhost:" + PORT);
-  console.log("Network: http://" + localIP + ":" + PORT);
-  console.log("");
+findFreePort(PREFERRED).then(PORT => {
+  server.listen(PORT, () => {
+    console.log("\nInstbyte running");
+    console.log("Local:   http://localhost:" + PORT);
+    console.log("Network: http://" + localIP + ":" + PORT);
+    if (PORT !== PREFERRED) {
+      console.log(`(port ${PREFERRED} was busy, switched to ${PORT})`);
+    }
+    console.log("");
+  });
 });
