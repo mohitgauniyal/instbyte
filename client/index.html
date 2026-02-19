@@ -262,6 +262,32 @@
       background: #7f1d1d;
       color: #fff;
     }
+
+    .left {
+      cursor: pointer;
+      position: relative;
+    }
+
+    .left:hover::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 0;
+      background: #111827;
+      color: #fff;
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 5px;
+      white-space: nowrap;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .left.flash {
+      background: #d1fae5;
+      border-radius: 6px;
+      transition: background 0.3s ease;
+    }
   </style>
 </head>
 
@@ -366,6 +392,20 @@
       return "";
     }
 
+    function handleRowClick(el, type, value) {
+      if (type === "text") {
+        navigator.clipboard.writeText(value).then(() => {
+          el.classList.add("flash");
+          setTimeout(() => el.classList.remove("flash"), 800);
+        });
+      } else {
+        const a = document.createElement("a");
+        a.href = value;
+        a.download = "";
+        a.click();
+      }
+    }
+
     let channel = null;
     let channels = [];
 
@@ -436,19 +476,26 @@
 
         const pinText = i.pinned ? "unpin" : "pin";
 
+        const isFile = i.type === "file";
+        const clickValue = isFile
+          ? `/uploads/${i.filename}`
+          : i.content;
+        const tooltip = isFile ? "Click to download" : "Click to copy";
+
         div.innerHTML = `
-      <div class="left">
+      <div class="left" data-tooltip="${tooltip}"
+           onclick="handleRowClick(this, '${isFile ? 'file' : 'text'}', '${clickValue.replace(/'/g, "\\'")}')">
         ${content}
         <div class="meta">${i.uploader}</div>
       </div>
       <div class="item-actions">
-  <button class="icon-btn" onclick="pin(${i.id})" title="pin">
-    ${i.pinned ? "📍" : "📌"}
-  </button>
-  <button class="icon-btn delete" onclick="del(${i.id})" title="delete">
-    🗑
-  </button>
-</div>
+        <button class="icon-btn" onclick="pin(${i.id})" title="pin">
+          ${i.pinned ? "📍" : "📌"}
+        </button>
+        <button class="icon-btn delete" onclick="del(${i.id})" title="delete">
+          🗑
+        </button>
+      </div>
     `;
 
         el.appendChild(div);
@@ -512,16 +559,27 @@
             }
           }
 
+          const isFile = i.type === "file";
+          const clickValue = isFile
+            ? `/uploads/${i.filename}`
+            : i.content;
+          const tooltip = isFile ? "Click to download" : "Click to copy";
+
           div.innerHTML = `
-        <div class="left">
-          ${content}
-          <div class="meta">${i.uploader}</div>
-        </div>
-        <div class="item-actions">
-          <button class="icon-btn" onclick="pin(${i.id})">${i.pinned ? "📍" : "📌"}</button>
-          <button class="icon-btn delete" onclick="del(${i.id})">🗑</button>
-        </div>
-      `;
+      <div class="left" data-tooltip="${tooltip}"
+           onclick="handleRowClick(this, '${isFile ? 'file' : 'text'}', '${clickValue.replace(/'/g, "\\'")}')">
+        ${content}
+        <div class="meta">${i.uploader}</div>
+      </div>
+      <div class="item-actions">
+        <button class="icon-btn" onclick="pin(${i.id})" title="pin">
+          ${i.pinned ? "📍" : "📌"}
+        </button>
+        <button class="icon-btn delete" onclick="del(${i.id})" title="delete">
+          🗑
+        </button>
+      </div>
+    `;
 
           section.appendChild(div);
         });
