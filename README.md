@@ -1,11 +1,8 @@
-```{=html}
 <p align="center">
-```
-`<img src="/client/assets/logo.png" alt="Instbyte Logo" width="120" />`{=html}
-```{=html}
+  <img src="client/assets/logo.png" alt="Instbyte Logo" width="120">
 </p>
-```
-# Instbyte
+
+<h1 align="center">Instbyte</h1>
 
 **Instbyte** is a high-speed, real-time ephemeral sharing utility
 designed for teams and developers who need to move snippets, links, and
@@ -78,7 +75,7 @@ purged automatically.
 
 ------------------------------------------------------------------------
 
-## 🛠 Use Cases
+## Use Cases
 
 -   **Sprint Collaboration**\
     Quickly swap API payloads or UI screenshots during pairing sessions.
