@@ -1,164 +1,197 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <title>Instbyte</title>
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16.png">
   <meta name="viewport" content="width=device-width,initial-scale=1">
 
   <style>
-    body{
+    body {
       font-family: system-ui;
-      background:#f3f4f6;
-      margin:0;
-    }
-    header{
-  background:#ffffff;
-  color:#111827;
-  padding:14px 20px;
-  border-bottom:1px solid #e5e7eb;
-}
-    .container{
-      max-width:900px;
-      margin:20px auto;
-      padding:0 12px;
-    }
-    .channels button{
-      margin-right:8px;
-      padding:8px 14px;
-      border:none;
-      background:#e5e7eb;
-      cursor:pointer;
-      border-radius:6px;
-    }
-    .channels .active{
-      background:#111827;
-      color:#fff;
-    }
-    .composer{
-      background:#fff;
-      padding:12px;
-      border-radius:8px;
-      margin-top:12px;
-      display:flex;
-      gap:8px;
-    }
-    input[type=text]{
-      flex:1;
-      padding:10px;
-      border:1px solid #ddd;
-      border-radius:6px;
-    }
-    button{
-      padding:10px 14px;
-      border:none;
-      background:#111827;
-      color:#fff;
-      border-radius:6px;
-      cursor:pointer;
-    }
-    .drop{
-      border:2px dashed #ccc;
-      padding:18px;
-      margin-top:12px;
-      text-align:center;
-      background:#fff;
-      border-radius:8px;
-    }
-    .item{
-      background:#fff;
-      padding:12px;
-      margin-top:10px;
-      border-radius:8px;
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-    }
-    .meta{
-      font-size:12px;
-      color:#6b7280;
-    }
-    .left{
-      max-width:70%;
-      word-break:break-word;
+      background: #f3f4f6;
+      margin: 0;
     }
 
-    .item-actions{
-  display:flex;
-  gap:8px;
-}
+    header {
+      background: #ffffff;
+      color: #111827;
+      padding: 14px 20px;
+      border-bottom: 1px solid #e5e7eb;
+    }
 
-.icon-btn{
-  background:#f3f4f6;
-  border:1px solid #e5e7eb;
-  border-radius:6px;
-  padding:6px 8px;
-  cursor:pointer;
-  font-size:14px;
-  line-height:1;
-}
+    .container {
+      max-width: 900px;
+      margin: 20px auto;
+      padding: 0 12px;
+    }
 
-.icon-btn:hover{
-  background:#e5e7eb;
-}
+    .channel-bar {
+      background: #e5e7eb;
+      border-radius: 12px;
+      padding: 6px;
+      margin-bottom: 16px;
+    }
 
-.icon-btn.delete{
-  color:#b91c1c;
-  border-color:#fecaca;
-  background:#fff;
-}
+    .channels {
+      display: flex;
+      gap: 6px;
+    }
 
-.icon-btn.delete:hover{
-  background:#fee2e2;
-}
+    .channels button {
+      background: transparent;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      color: #4b5563;
+      transition: all 0.15s ease;
+    }
 
+    .channels button:hover {
+      background: #d1d5db;
+      color: #111827;
+    }
+
+    .channels button.active {
+      background: #f9fafb;
+      color: #111827;
+    }
+
+    .composer {
+      background: #fff;
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 12px;
+      display: flex;
+      gap: 8px;
+    }
+
+    input[type=text] {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+    }
+
+    button {
+      padding: 10px 14px;
+      border: none;
+      background: #111827;
+      color: #fff;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .drop {
+      border: 2px dashed #ccc;
+      padding: 18px;
+      margin-top: 12px;
+      text-align: center;
+      background: #fff;
+      border-radius: 8px;
+    }
+
+    .item {
+      background: #fff;
+      padding: 12px;
+      margin-top: 10px;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .meta {
+      font-size: 12px;
+      color: #6b7280;
+    }
+
+    .left {
+      max-width: 70%;
+      word-break: break-word;
+    }
+
+    .item-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .icon-btn {
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 6px 8px;
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1;
+    }
+
+    .icon-btn:hover {
+      background: #e5e7eb;
+    }
+
+    .icon-btn.delete {
+      color: #b91c1c;
+      border-color: #fecaca;
+      background: #fff;
+    }
+
+    .icon-btn.delete:hover {
+      background: #fee2e2;
+    }
   </style>
 </head>
+
 <body>
 
-<header style="display:flex;justify-content:space-between;align-items:center">
-  <div style="display:flex;align-items:center;gap:10px;">
-  <img src="/assets/logo.png" style="height:26px">
-  <span style="color:#111827">Instbyte</span>
+  <header style="display:flex;justify-content:space-between;align-items:center">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <img src="/assets/logo.png" style="height:26px">
+      <span style="color:#111827">Instbyte</span>
 
-</div>
-
-
-  <div style="font-size:13px">
-    <span id="who"></span>
-    <button onclick="changeName()" style="margin-left:8px;background:#374151;padding:6px 10px;font-size:12px">
-      change
-    </button>
-  </div>
-</header>
+    </div>
 
 
+    <div style="font-size:13px">
+      <span id="who"></span>
+      <button onclick="changeName()" style="margin-left:8px;background:#374151;padding:6px 10px;font-size:12px">
+        change
+      </button>
+    </div>
+  </header>
 
-<div class="container">
 
-<div class="channels">
-  <button onclick="setChannel('general')" id="ch-general">General</button>
-  <button onclick="setChannel('dev')" id="ch-dev">Dev</button>
-  <button onclick="setChannel('design')" id="ch-design">Design</button>
-  <button onclick="setChannel('temp')" id="ch-temp">Temp</button>
-</div>
 
-<div style="margin-top:10px;">
-  <input id="search" placeholder="Search…" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd">
-</div>
+  <div class="container">
 
-<div class="composer">
-  <input id="msg" placeholder="Type message or paste link" onkeydown="handleEnter(event)"/>
-  <button onclick="sendText()">Send</button>
-  <input type="file" id="fileInput" hidden>
-  <button onclick="fileInput.click()">Upload</button>
-</div>
+    <div class="channel-bar">
+      <div class="channels">
+        <button onclick="setChannel('general')" id="ch-general">General</button>
+        <button onclick="setChannel('dev')" id="ch-dev">Dev</button>
+        <button onclick="setChannel('design')" id="ch-design">Design</button>
+        <button onclick="setChannel('temp')" id="ch-temp">Temp</button>
+      </div>
+    </div>
 
-<div class="drop" id="drop">
-  Drag files anywhere to upload
-</div>
+    <div style="margin-top:10px;">
+      <input id="search" placeholder="Search…" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd">
+    </div>
 
-<div id="uploadStatus" style="
+    <div class="composer">
+      <input id="msg" placeholder="Type message or paste link" onkeydown="handleEnter(event)" />
+      <button onclick="sendText()">Send</button>
+      <input type="file" id="fileInput" hidden>
+      <button onclick="fileInput.click()">Upload</button>
+    </div>
+
+    <div class="drop" id="drop">
+      Drag files anywhere to upload
+    </div>
+
+    <div id="uploadStatus" style="
   display:none;
   background:#111827;
   color:#fff;
@@ -167,22 +200,22 @@
   margin-top:10px;
   font-size:13px;
 ">
-  <div id="uploadText">Uploading...</div>
-  <div style="background:#374151;height:6px;border-radius:4px;margin-top:6px;">
-    <div id="uploadBar" style="
+      <div id="uploadText">Uploading...</div>
+      <div style="background:#374151;height:6px;border-radius:4px;margin-top:6px;">
+        <div id="uploadBar" style="
       width:0%;
       height:6px;
       background:#10b981;
       border-radius:4px;
     "></div>
+      </div>
+    </div>
+
+    <div id="items"></div>
+
   </div>
-</div>
 
-<div id="items"></div>
-
-</div>
-
-<div id="dragOverlay" style="
+  <div id="dragOverlay" style="
   position:fixed;
   inset:0;
   background:rgba(0,0,0,0.55);
@@ -194,77 +227,77 @@
   z-index:9999;
   pointer-events:none;
 ">
-  Drop to upload
-</div>
+    Drop to upload
+  </div>
 
-<script src="/socket.io/socket.io.js"></script>
-<script>
-const socket = io();
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
 
-let channel = "general";
+    let channel = "general";
 
-let uploader = localStorage.getItem("name");
+    let uploader = localStorage.getItem("name");
 
-if(!uploader || uploader === "null" || uploader.trim() === ""){
-  uploader = prompt("Your name?");
-  if(!uploader) uploader = "anon";
-  localStorage.setItem("name", uploader);
-}
-
-document.getElementById("who").innerText = "You: " + uploader;
-socket.emit("join", uploader);
-
-function highlight(){
-  document.querySelectorAll(".channels button")
-    .forEach(b=>b.classList.remove("active"));
-  document.getElementById("ch-"+channel).classList.add("active");
-}
-
-function setChannel(c){
-  channel=c;
-  document.getElementById("search").value="";
-  highlight();
-  load();
-}
-
-highlight();
-
-async function load(){
-  const res = await fetch("/items/"+channel);
-  const data = await res.json();
-  render(data);
-}
-
-function render(data){
-  const el=document.getElementById("items");
-  el.innerHTML="";
-
-  data.forEach(i=>{
-    const div=document.createElement("div");
-    div.className="item";
-
-    let content="";
-
-    if(i.type==="file"){
-      const isImg = i.filename.match(/\.(jpg|png|jpeg|gif)$/i);
-      if(isImg){
-        content=`<img src="/uploads/${i.filename}" style="max-width:200px;border-radius:6px"><br>
-        <a href="/uploads/${i.filename}" target="_blank">${i.filename}</a>`;
-      }else{
-        content=`<a href="/uploads/${i.filename}" target="_blank">${i.filename}</a>`;
-      }
-    }else{
-      const isLink = i.content.startsWith("http");
-      if(isLink){
-        content=`<a href="${i.content}" target="_blank">${i.content}</a>`;
-      }else{
-        content=i.content;
-      }
+    if (!uploader || uploader === "null" || uploader.trim() === "") {
+      uploader = prompt("Your name?");
+      if (!uploader) uploader = "anon";
+      localStorage.setItem("name", uploader);
     }
 
-    const pinText = i.pinned ? "unpin" : "pin";
+    document.getElementById("who").innerText = "You: " + uploader;
+    socket.emit("join", uploader);
 
-    div.innerHTML=`
+    function highlight() {
+      document.querySelectorAll(".channels button")
+        .forEach(b => b.classList.remove("active"));
+      document.getElementById("ch-" + channel).classList.add("active");
+    }
+
+    function setChannel(c) {
+      channel = c;
+      document.getElementById("search").value = "";
+      highlight();
+      load();
+    }
+
+    highlight();
+
+    async function load() {
+      const res = await fetch("/items/" + channel);
+      const data = await res.json();
+      render(data);
+    }
+
+    function render(data) {
+      const el = document.getElementById("items");
+      el.innerHTML = "";
+
+      data.forEach(i => {
+        const div = document.createElement("div");
+        div.className = "item";
+
+        let content = "";
+
+        if (i.type === "file") {
+          const isImg = i.filename.match(/\.(jpg|png|jpeg|gif)$/i);
+          if (isImg) {
+            content = `<img src="/uploads/${i.filename}" style="max-width:200px;border-radius:6px"><br>
+        <a href="/uploads/${i.filename}" target="_blank">${i.filename}</a>`;
+          } else {
+            content = `<a href="/uploads/${i.filename}" target="_blank">${i.filename}</a>`;
+          }
+        } else {
+          const isLink = i.content.startsWith("http");
+          if (isLink) {
+            content = `<a href="${i.content}" target="_blank">${i.content}</a>`;
+          } else {
+            content = i.content;
+          }
+        }
+
+        const pinText = i.pinned ? "unpin" : "pin";
+
+        div.innerHTML = `
       <div class="left">
         ${content}
         <div class="meta">${i.uploader}</div>
@@ -279,177 +312,178 @@ function render(data){
 </div>
     `;
 
-    el.appendChild(div);
-  });
-}
-
-
-async function sendText(){
-  const input=document.getElementById("msg");
-  const text=input.value.trim();
-  if(!text) return;
-
-  await fetch("/text",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({content:text,channel,uploader})
-  });
-
-  input.value="";
-}
-
-function handleEnter(e){
-  if(e.key === "Enter" && !e.shiftKey){
-    e.preventDefault();
-    sendText();
-  }
-}
-
-function changeName(){
-  const n = prompt("Enter name:");
-  if(!n) return;
-  uploader = n;
-  localStorage.setItem("name", n);
-  document.getElementById("who").innerText = "You: " + uploader;
-}
-
-const fileInput=document.getElementById("fileInput");
-
-fileInput.onchange = ()=>{
-  const file = fileInput.files[0];
-  if(file) uploadFile(file);
-};
-
-async function del(id){
-  await fetch("/item/"+id,{method:"DELETE"});
-}
-
-async function pin(id){
-  await fetch("/pin/"+id,{method:"POST"});
-  load();
-}
-
-socket.on("new-item", item=>{
-  if(item.channel===channel) load();
-});
-
-socket.on("delete-item", id=>{
-  load();
-});
-
-document.getElementById("search").addEventListener("input", async e=>{
-  const q=e.target.value.trim();
-  if(!q){
-    load();
-    return;
-  }
-  const res=await fetch(`/search/${channel}/${q}`);
-  const data=await res.json();
-  render(data);
-});
-
-document.addEventListener("paste", async e=>{
-  const active = document.activeElement;
-
-  // if user is typing in input, don't auto-send
-  if(active && active.id === "msg") return;
-
-  const text = e.clipboardData.getData("text");
-  if(!text) return;
-
-  await fetch("/text",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({
-      content:text,
-      channel,
-      uploader
-    })
-  });
-});
-
-function uploadFile(file){
-  const status = document.getElementById("uploadStatus");
-  const bar = document.getElementById("uploadBar");
-  const text = document.getElementById("uploadText");
-
-  status.style.display = "block";
-  bar.style.width = "0%";
-  text.innerText = "Uploading: " + file.name;
-
-  const form = new FormData();
-  form.append("file", file);
-  form.append("channel", channel);
-  form.append("uploader", uploader);
-
-  const xhr = new XMLHttpRequest();
-  xhr.open("POST", "/upload", true);
-
-  xhr.upload.onprogress = e=>{
-    if(e.lengthComputable){
-      const percent = Math.round((e.loaded / e.total) * 100);
-      bar.style.width = percent + "%";
+        el.appendChild(div);
+      });
     }
-  };
 
-  xhr.onload = ()=>{
-    status.style.display = "none";
-    fileInput.value = "";   // reset picker
+
+    async function sendText() {
+      const input = document.getElementById("msg");
+      const text = input.value.trim();
+      if (!text) return;
+
+      await fetch("/text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: text, channel, uploader })
+      });
+
+      input.value = "";
+    }
+
+    function handleEnter(e) {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendText();
+      }
+    }
+
+    function changeName() {
+      const n = prompt("Enter name:");
+      if (!n) return;
+      uploader = n;
+      localStorage.setItem("name", n);
+      document.getElementById("who").innerText = "You: " + uploader;
+    }
+
+    const fileInput = document.getElementById("fileInput");
+
+    fileInput.onchange = () => {
+      const file = fileInput.files[0];
+      if (file) uploadFile(file);
+    };
+
+    async function del(id) {
+      await fetch("/item/" + id, { method: "DELETE" });
+    }
+
+    async function pin(id) {
+      await fetch("/pin/" + id, { method: "POST" });
+      load();
+    }
+
+    socket.on("new-item", item => {
+      if (item.channel === channel) load();
+    });
+
+    socket.on("delete-item", id => {
+      load();
+    });
+
+    document.getElementById("search").addEventListener("input", async e => {
+      const q = e.target.value.trim();
+      if (!q) {
+        load();
+        return;
+      }
+      const res = await fetch(`/search/${channel}/${q}`);
+      const data = await res.json();
+      render(data);
+    });
+
+    document.addEventListener("paste", async e => {
+      const active = document.activeElement;
+
+      // if user is typing in input, don't auto-send
+      if (active && active.id === "msg") return;
+
+      const text = e.clipboardData.getData("text");
+      if (!text) return;
+
+      await fetch("/text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: text,
+          channel,
+          uploader
+        })
+      });
+    });
+
+    function uploadFile(file) {
+      const status = document.getElementById("uploadStatus");
+      const bar = document.getElementById("uploadBar");
+      const text = document.getElementById("uploadText");
+
+      status.style.display = "block";
+      bar.style.width = "0%";
+      text.innerText = "Uploading: " + file.name;
+
+      const form = new FormData();
+      form.append("file", file);
+      form.append("channel", channel);
+      form.append("uploader", uploader);
+
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", "/upload", true);
+
+      xhr.upload.onprogress = e => {
+        if (e.lengthComputable) {
+          const percent = Math.round((e.loaded / e.total) * 100);
+          bar.style.width = percent + "%";
+        }
+      };
+
+      xhr.onload = () => {
+        status.style.display = "none";
+        fileInput.value = "";   // reset picker
+        load();
+      };
+
+      xhr.onerror = () => {
+        status.style.display = "none";
+        alert("Upload failed");
+      };
+
+      xhr.send(form);
+    }
+
+
+    const overlay = document.getElementById("dragOverlay");
+    let dragCounter = 0;
+
+    /* DRAG ENTER */
+    document.addEventListener("dragenter", e => {
+      e.preventDefault();
+      dragCounter++;
+      overlay.style.display = "flex";
+    });
+
+    /* DRAG LEAVE */
+    document.addEventListener("dragleave", e => {
+      dragCounter--;
+      if (dragCounter <= 0) {
+        overlay.style.display = "none";
+        dragCounter = 0;
+      }
+    });
+
+    /* DRAG OVER */
+    document.addEventListener("dragover", e => {
+      e.preventDefault();
+    });
+
+    /* DROP ANYWHERE */
+    document.addEventListener("drop", async e => {
+      e.preventDefault();
+      overlay.style.display = "none";
+      dragCounter = 0;
+
+      const file = e.dataTransfer.files[0];
+      if (!file) return;
+
+      const form = new FormData();
+      form.append("file", file);
+      form.append("channel", channel);
+      form.append("uploader", uploader);
+
+      uploadFile(file);
+    });
+
     load();
-  };
-
-  xhr.onerror = ()=>{
-    status.style.display = "none";
-    alert("Upload failed");
-  };
-
-  xhr.send(form);
-}
-
-
-const overlay = document.getElementById("dragOverlay");
-let dragCounter = 0;
-
-/* DRAG ENTER */
-document.addEventListener("dragenter", e=>{
-  e.preventDefault();
-  dragCounter++;
-  overlay.style.display="flex";
-});
-
-/* DRAG LEAVE */
-document.addEventListener("dragleave", e=>{
-  dragCounter--;
-  if(dragCounter<=0){
-    overlay.style.display="none";
-    dragCounter=0;
-  }
-});
-
-/* DRAG OVER */
-document.addEventListener("dragover", e=>{
-  e.preventDefault();
-});
-
-/* DROP ANYWHERE */
-document.addEventListener("drop", async e=>{
-  e.preventDefault();
-  overlay.style.display="none";
-  dragCounter=0;
-
-  const file = e.dataTransfer.files[0];
-  if(!file) return;
-
-  const form = new FormData();
-  form.append("file", file);
-  form.append("channel", channel);
-  form.append("uploader", uploader);
-
-  uploadFile(file);
-});
-
-load();
-</script>
+  </script>
 
 </body>
+
 </html>
