@@ -223,6 +223,20 @@
     .link-btn:hover {
       color: #111827;
     }
+
+    .add-channel {
+      background: transparent;
+      color: #6b7280;
+      font-weight: 600;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    .add-channel:hover {
+      background: #d1d5db;
+    }
   </style>
 </head>
 
@@ -253,12 +267,7 @@
   <div class="container">
 
     <div class="channel-bar">
-      <div class="channels">
-        <button onclick="setChannel('general')" id="ch-general">General</button>
-        <button onclick="setChannel('dev')" id="ch-dev">Dev</button>
-        <button onclick="setChannel('design')" id="ch-design">Design</button>
-        <button onclick="setChannel('temp')" id="ch-temp">Temp</button>
-      </div>
+      <div class="channels" id="channels"></div>
     </div>
 
     <div class="composer">
@@ -316,6 +325,7 @@
     const socket = io();
 
     let channel = "general";
+    let channels = ["general", "dev", "design", "temp"];
 
     let uploader = localStorage.getItem("name");
 
@@ -336,12 +346,10 @@
 
     function setChannel(c) {
       channel = c;
-      document.getElementById("search").value = "";
+      renderChannels();
       highlight();
       load();
     }
-
-    highlight();
 
     async function load() {
       const res = await fetch("/items/" + channel);
@@ -614,6 +622,44 @@
       }
     });
 
+    function renderChannels() {
+      const container = document.getElementById("channels");
+      container.innerHTML = "";
+
+      channels.forEach(ch => {
+        const btn = document.createElement("button");
+        btn.innerText = ch;
+        btn.id = "ch-" + ch;
+        btn.onclick = () => setChannel(ch);
+
+        // add delete × only for active tab
+        if (ch === channel) {
+          const del = document.createElement("span");
+          del.innerText = " ×";
+          del.style.marginLeft = "6px";
+          del.style.cursor = "pointer";
+          del.style.fontWeight = "500";
+          del.onclick = (e) => {
+            e.stopPropagation();
+            alert("Delete functionality coming next stage");
+          };
+          btn.appendChild(del);
+        }
+
+        container.appendChild(btn);
+      });
+
+      // Add + tab
+      const addBtn = document.createElement("button");
+      addBtn.innerText = "+";
+      addBtn.className = "add-channel";
+      addBtn.onclick = () => {
+        alert("Add functionality coming next stage");
+      };
+
+      container.appendChild(addBtn);
+    }
+
     /* DRAG OVER */
     document.addEventListener("dragover", e => {
       e.preventDefault();
@@ -636,6 +682,8 @@
       uploadFile(file);
     });
 
+    renderChannels();
+    highlight();
     load();
   </script>
 
