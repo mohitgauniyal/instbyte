@@ -151,6 +151,33 @@ app.get("/search/:q", (req, res) => {
   );
 });
 
+app.get("/channels", (req, res) => {
+  db.all("SELECT * FROM channels ORDER BY id ASC", (err, rows) => {
+    res.json(rows);
+  });
+});
+
+app.post("/channels", (req, res) => {
+  const { name } = req.body;
+
+  if (!name) return res.status(400).json({ error: "Name required" });
+
+  db.run("INSERT INTO channels (name) VALUES (?)", [name], function (err) {
+    if (err) {
+      return res.status(400).json({ error: "Channel exists" });
+    }
+    res.json({ id: this.lastID, name });
+  });
+});
+
+app.delete("/channels/:name", (req, res) => {
+  const name = req.params.name;
+
+  db.run("DELETE FROM channels WHERE name=?", [name], () => {
+    res.sendStatus(200);
+  });
+});
+
 
 /* ============================
    SOCKET CONNECTION LOGGING

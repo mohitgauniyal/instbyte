@@ -325,7 +325,7 @@
     const socket = io();
 
     let channel = "general";
-    let channels = ["general", "dev", "design", "temp"];
+    let channels = [];
 
     let uploader = localStorage.getItem("name");
 
@@ -622,6 +622,13 @@
       }
     });
 
+    async function loadChannels() {
+      const res = await fetch("/channels");
+      const data = await res.json();
+      channels = data.map(c => c.name);
+      renderChannels();
+      highlight();
+    }
     function renderChannels() {
       const container = document.getElementById("channels");
       container.innerHTML = "";
@@ -639,10 +646,22 @@
           del.style.marginLeft = "6px";
           del.style.cursor = "pointer";
           del.style.fontWeight = "500";
-          del.onclick = (e) => {
+          del.onclick = async (e) => {
             e.stopPropagation();
-            alert("Delete functionality coming next stage");
+
+            await fetch("/channels/" + ch, {
+              method: "DELETE"
+            });
+
+            await loadChannels();
+
+            // if we deleted the active channel
+            if (channel === ch) {
+              channel = channels[0];
+              load();
+            }
           };
+
           btn.appendChild(del);
         }
 
@@ -650,14 +669,28 @@
       });
 
       // Add + tab
+      // Add + tab
       const addBtn = document.createElement("button");
       addBtn.innerText = "+";
       addBtn.className = "add-channel";
-      addBtn.onclick = () => {
-        alert("Add functionality coming next stage");
+
+      addBtn.onclick = async () => {
+
+        const name = prompt("Channel name?");
+        if (!name) return;
+
+        await fetch("/channels", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name })
+        });
+
+        await loadChannels();
+
       };
 
       container.appendChild(addBtn);
+
     }
 
     /* DRAG OVER */
@@ -682,9 +715,10 @@
       uploadFile(file);
     });
 
-    renderChannels();
-    highlight();
-    load();
+    (async function init() {
+      await loadChannels();
+      load();
+    })();
   </script>
 
 </body>
