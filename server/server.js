@@ -28,30 +28,42 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({ storage });
-
+const upload = multer({
+  storage,
+  limits: { fileSize: 2 * 1024 * 1024 * 1024 }
+});
 /* FILE UPLOAD */
-app.post("/upload", upload.single("file"), (req, res) => {
-  const { channel, uploader } = req.body;
-
-  const item = {
-    type: "file",
-    filename: req.file.filename,
-    channel,
-    uploader,
-    created_at: Date.now(),
-  };
-
-  db.run(
-    `INSERT INTO items (type, filename, channel, uploader, created_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    ["file", item.filename, channel, uploader, item.created_at],
-    function () {
-      item.id = this.lastID;
-      io.emit("new-item", item);
-      res.json(item);
+app.post("/upload", (req, res) => {
+  upload.single("file")(req, res, (err) => {
+    if (err && err.code === "LIMIT_FILE_SIZE") {
+      return res.status(413).json({ error: "File exceeds 2GB limit" });
     }
-  );
+    if (err) {
+      return res.status(500).json({ error: "Upload failed" });
+    }
+
+    const { channel, uploader } = req.body;
+
+    const item = {
+      type: "file",
+      filename: req.file.filename,
+      size: req.file.size,
+      channel,
+      uploader,
+      created_at: Date.now(),
+    };
+
+    db.run(
+      `INSERT INTO items (type, filename, size, channel, uploader, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      ["file", item.filename, item.size, channel, uploader, item.created_at],
+      function () {
+        item.id = this.lastID;
+        io.emit("new-item", item);
+        res.json(item);
+      }
+    );
+  });
 });
 
 /* TEXT/LINK */

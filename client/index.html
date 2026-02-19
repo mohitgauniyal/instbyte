@@ -237,6 +237,31 @@
     .add-channel:hover {
       background: #d1d5db;
     }
+
+    .size-tag {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 2px 7px;
+      border-radius: 4px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+
+    .size-tag.warn {
+      background: #fef9c3;
+      color: #854d0e;
+    }
+
+    .size-tag.danger-light {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+
+    .size-tag.danger-dark {
+      background: #7f1d1d;
+      color: #fff;
+    }
   </style>
 </head>
 
@@ -324,6 +349,23 @@
   <script>
     const socket = io();
 
+    function formatSize(bytes) {
+      if (!bytes) return "";
+      if (bytes >= 1024 ** 3) return (bytes / 1024 ** 3).toFixed(1) + " GB";
+      if (bytes >= 1024 ** 2) return (bytes / 1024 ** 2).toFixed(1) + " MB";
+      if (bytes >= 1024) return (bytes / 1024).toFixed(1) + " KB";
+      return bytes + " B";
+    }
+
+    function getSizeTag(bytes) {
+      if (!bytes) return "";
+      const mb = bytes / (1024 * 1024);
+      if (mb > 1024) return "danger-dark";
+      if (mb > 500) return "danger-light";
+      if (mb > 100) return "warn";
+      return "";
+    }
+
     let channel = null;
     let channels = [];
 
@@ -369,11 +411,19 @@
 
         if (i.type === "file") {
           const isImg = i.filename.match(/\.(jpg|png|jpeg|gif)$/i);
+          const sizeLabel = formatSize(i.size);
+          const sizeClass = getSizeTag(i.size);
+          const sizeTag = sizeClass
+            ? `<span class="size-tag ${sizeClass}">${sizeLabel}</span>`
+            : sizeLabel
+              ? `<span style="font-size:11px;color:#9ca3af;margin-left:6px;">${sizeLabel}</span>`
+              : "";
+
           if (isImg) {
             content = `<img src="/uploads/${i.filename}" style="max-width:200px;border-radius:6px"><br>
-        <a href="/uploads/${i.filename}" target="_blank">${i.filename}</a>`;
+        <a href="/uploads/${i.filename}" target="_blank">${i.filename}</a>${sizeTag}`;
           } else {
-            content = `<a href="/uploads/${i.filename}" target="_blank">${i.filename}</a>`;
+            content = `<a href="/uploads/${i.filename}" target="_blank">${i.filename}</a>${sizeTag}`;
           }
         } else {
           const isLink = i.content.startsWith("http");
@@ -439,11 +489,19 @@
 
           if (i.type === "file") {
             const isImg = i.filename.match(/\.(jpg|png|jpeg|gif)$/i);
+            const sizeLabel = formatSize(i.size);
+            const sizeClass = getSizeTag(i.size);
+            const sizeTag = sizeClass
+              ? `<span class="size-tag ${sizeClass}">${sizeLabel}</span>`
+              : sizeLabel
+                ? `<span style="font-size:11px;color:#9ca3af;margin-left:6px;">${sizeLabel}</span>`
+                : "";
+
             if (isImg) {
               content = `<img src="/uploads/${i.filename}" style="max-width:200px;border-radius:6px"><br>
-          <a href="/uploads/${i.filename}" target="_blank">${i.filename}</a>`;
+        <a href="/uploads/${i.filename}" target="_blank">${i.filename}</a>${sizeTag}`;
             } else {
-              content = `<a href="/uploads/${i.filename}" target="_blank">${i.filename}</a>`;
+              content = `<a href="/uploads/${i.filename}" target="_blank">${i.filename}</a>${sizeTag}`;
             }
           } else {
             const isLink = i.content.startsWith("http");
@@ -606,7 +664,12 @@
 
       xhr.onload = () => {
         status.style.display = "none";
-        fileInput.value = "";   // reset picker
+        if (xhr.status === 413) {
+          alert("File too large — 2GB maximum allowed.");
+          fileInput.value = "";
+          return;
+        }
+        fileInput.value = "";
         load();
       };
 

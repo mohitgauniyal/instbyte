@@ -14,6 +14,7 @@ db.serialize(() => {
       type TEXT,
       content TEXT,
       filename TEXT,
+      size INTEGER DEFAULT 0,
       channel TEXT,
       uploader TEXT,
       pinned INTEGER DEFAULT 0,
