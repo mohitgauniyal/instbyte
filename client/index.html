@@ -288,6 +288,68 @@
       border-radius: 6px;
       transition: background 0.3s ease;
     }
+
+    .qr-widget {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+    }
+
+    .qr-card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      display: none;
+      width: 200px;
+    }
+
+    .qr-card.open {
+      display: block;
+    }
+
+    .qr-card img {
+      width: 160px;
+      height: 160px;
+      border-radius: 6px;
+    }
+
+    .qr-card .qr-url {
+      font-size: 11px;
+      color: #6b7280;
+      margin-top: 8px;
+      word-break: break-all;
+      line-height: 1.4;
+    }
+
+    .qr-card .qr-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 10px;
+    }
+
+    .qr-toggle {
+      background: #111827;
+      color: #fff;
+      border: none;
+      border-radius: 20px;
+      padding: 8px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .qr-toggle:hover {
+      background: #1f2937;
+    }
   </style>
 </head>
 
@@ -369,6 +431,15 @@
   pointer-events:none;
 ">
     Drop to upload
+  </div>
+
+  <div class="qr-widget">
+    <div class="qr-card" id="qrCard">
+      <div class="qr-label">Join on network</div>
+      <img id="qrImg" src="" alt="QR">
+      <div class="qr-url" id="qrUrl"></div>
+    </div>
+    <button class="qr-toggle" onclick="toggleQR()">📡 Join</button>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
@@ -616,6 +687,29 @@
       localStorage.setItem("name", n);
       document.getElementById("who").innerText = "You: " + uploader;
     }
+
+    let qrLoaded = false;
+
+    async function toggleQR() {
+      const card = document.getElementById("qrCard");
+      card.classList.toggle("open");
+
+      if (card.classList.contains("open") && !qrLoaded) {
+        const res = await fetch("/info");
+        const { url } = await res.json();
+        document.getElementById("qrUrl").innerText = url;
+        document.getElementById("qrImg").src =
+          `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(url)}`;
+        qrLoaded = true;
+      }
+    }
+
+    document.addEventListener("click", e => {
+      const widget = document.querySelector(".qr-widget");
+      if (!widget.contains(e.target)) {
+        document.getElementById("qrCard").classList.remove("open");
+      }
+    });
 
     const fileInput = document.getElementById("fileInput");
 

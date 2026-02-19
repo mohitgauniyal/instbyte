@@ -250,6 +250,11 @@ app.patch("/channels/:name", (req, res) => {
 
 
 
+/*  */
+app.get("/info", (req, res) => {
+  res.json({ url: `http://${localIP}:${PORT}` });
+});
+
 /* ============================
    SOCKET CONNECTION LOGGING
 ============================ */
@@ -303,7 +308,10 @@ function findFreePort(start) {
 const PREFERRED = parseInt(process.env.PORT) || 3000;
 const localIP = getLocalIP();
 
-findFreePort(PREFERRED).then(PORT => {
+let PORT;
+
+findFreePort(PREFERRED).then(p => {
+  PORT = p;
   server.listen(PORT, () => {
     console.log("\nInstbyte running");
     console.log("Local:   http://localhost:" + PORT);
