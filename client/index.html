@@ -324,7 +324,7 @@
   <script>
     const socket = io();
 
-    let channel = "general";
+    let channel = null;
     let channels = [];
 
     let uploader = localStorage.getItem("name");
@@ -639,23 +639,39 @@
         btn.id = "ch-" + ch;
         btn.onclick = () => setChannel(ch);
 
-        // add delete × only for active tab
         if (ch === channel) {
           const del = document.createElement("span");
           del.innerText = " ×";
           del.style.marginLeft = "6px";
           del.style.cursor = "pointer";
           del.style.fontWeight = "500";
+
           del.onclick = async (e) => {
             e.stopPropagation();
 
-            await fetch("/channels/" + ch, {
+            // Check if channel has items
+            const itemsRes = await fetch("/items/" + ch);
+            const items = await itemsRes.json();
+
+            if (items.length > 0) {
+              const confirmDelete = confirm(
+                "This channel contains items. Are you sure you want to delete it?"
+              );
+              if (!confirmDelete) return;
+            }
+
+            const res = await fetch("/channels/" + ch, {
               method: "DELETE"
             });
 
+            if (!res.ok) {
+              const err = await res.json();
+              alert(err.error);
+              return;
+            }
+
             await loadChannels();
 
-            // if we deleted the active channel
             if (channel === ch) {
               channel = channels[0];
               load();
@@ -669,28 +685,36 @@
       });
 
       // Add + tab
-      // Add + tab
       const addBtn = document.createElement("button");
       addBtn.innerText = "+";
       addBtn.className = "add-channel";
 
       addBtn.onclick = async () => {
 
+        if (channels.length >= 10) {
+          alert("Maximum 10 channels allowed");
+          return;
+        }
+
         const name = prompt("Channel name?");
         if (!name) return;
 
-        await fetch("/channels", {
+        const res = await fetch("/channels", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name })
         });
 
-        await loadChannels();
+        if (!res.ok) {
+          const err = await res.json();
+          alert(err.error);
+          return;
+        }
 
+        await loadChannels();
       };
 
       container.appendChild(addBtn);
-
     }
 
     /* DRAG OVER */
@@ -717,6 +741,8 @@
 
     (async function init() {
       await loadChannels();
+      channel = channels[0];
+      highlight();
       load();
     })();
   </script>

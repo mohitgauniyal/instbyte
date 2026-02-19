@@ -37,7 +37,7 @@ db.serialize(() => {
     }
 
     if (row.count === 0) {
-      const defaults = ["general", "dev", "design", "temp"];
+      const defaults = ["general", "projects", "assets", "temp"];
       defaults.forEach(name => {
         db.run("INSERT INTO channels (name) VALUES (?)", [name]);
       });

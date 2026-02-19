@@ -158,25 +158,47 @@ app.get("/channels", (req, res) => {
 });
 
 app.post("/channels", (req, res) => {
-  const { name } = req.body;
 
+  const { name } = req.body;
   if (!name) return res.status(400).json({ error: "Name required" });
 
-  db.run("INSERT INTO channels (name) VALUES (?)", [name], function (err) {
-    if (err) {
-      return res.status(400).json({ error: "Channel exists" });
+  db.get("SELECT COUNT(*) as count FROM channels", (err, row) => {
+
+    if (row.count >= 10) {
+      return res.status(400).json({ error: "Max 10 channels allowed" });
     }
-    res.json({ id: this.lastID, name });
+
+    db.run("INSERT INTO channels (name) VALUES (?)", [name], function (err) {
+
+      if (err) {
+        return res.status(400).json({ error: "Channel exists" });
+      }
+
+      res.json({ id: this.lastID, name });
+
+    });
+
   });
+
 });
+
 
 app.delete("/channels/:name", (req, res) => {
   const name = req.params.name;
 
-  db.run("DELETE FROM channels WHERE name=?", [name], () => {
-    res.sendStatus(200);
+  db.get("SELECT COUNT(*) as count FROM channels", (err, row) => {
+
+    if (row.count <= 1) {
+      return res.status(400).json({ error: "At least one channel required" });
+    }
+
+    db.run("DELETE FROM channels WHERE name=?", [name], () => {
+      res.sendStatus(200);
+    });
+
   });
 });
+
 
 
 /* ============================
