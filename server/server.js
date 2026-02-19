@@ -207,9 +207,20 @@ app.delete("/channels/:name", (req, res) => {
       return res.status(400).json({ error: "At least one channel required" });
     }
 
-    db.run("DELETE FROM channels WHERE name=?", [name], () => {
-      io.emit("channel-deleted", { name });
-      res.sendStatus(200);
+    db.all("SELECT * FROM items WHERE channel=?", [name], (err, rows) => {
+      rows.forEach(item => {
+        if (item.filename) {
+          const filePath = path.join(__dirname, "../uploads", item.filename);
+          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        }
+      });
+
+      db.run("DELETE FROM items WHERE channel=?", [name], () => {
+        db.run("DELETE FROM channels WHERE name=?", [name], () => {
+          io.emit("channel-deleted", { name });
+          res.sendStatus(200);
+        });
+      });
     });
 
   });

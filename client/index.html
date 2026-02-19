@@ -738,16 +738,10 @@
           del.onclick = async (e) => {
             e.stopPropagation();
 
-            // Check if channel has items
-            const itemsRes = await fetch("/items/" + ch);
-            const items = await itemsRes.json();
-
-            if (items.length > 0) {
-              const confirmDelete = confirm(
-                "This channel contains items. Are you sure you want to delete it?"
-              );
-              if (!confirmDelete) return;
-            }
+            const confirmDelete = confirm(
+              `Delete "${ch}"? All items in this channel will be permanently removed.`
+            );
+            if (!confirmDelete) return;
 
             const res = await fetch("/channels/" + ch, {
               method: "DELETE"
