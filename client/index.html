@@ -525,6 +525,22 @@
       load();
     });
 
+    socket.on("channel-added", async ({ name }) => {
+      if (!channels.includes(name)) {
+        channels.push(name);
+        renderChannels();
+      }
+    });
+
+    socket.on("channel-deleted", async ({ name }) => {
+      channels = channels.filter(c => c !== name);
+      if (channel === name) {
+        channel = channels[0];
+        load();
+      }
+      renderChannels();
+      highlight();
+    });
     document.getElementById("search").addEventListener("input", async e => {
       const q = e.target.value.trim();
 

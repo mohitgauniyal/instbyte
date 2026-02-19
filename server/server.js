@@ -173,7 +173,7 @@ app.post("/channels", (req, res) => {
       if (err) {
         return res.status(400).json({ error: "Channel exists" });
       }
-
+      io.emit("channel-added", { id: this.lastID, name });
       res.json({ id: this.lastID, name });
 
     });
@@ -193,6 +193,7 @@ app.delete("/channels/:name", (req, res) => {
     }
 
     db.run("DELETE FROM channels WHERE name=?", [name], () => {
+      io.emit("channel-deleted", { name });
       res.sendStatus(200);
     });
 
