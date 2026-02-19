@@ -170,6 +170,7 @@ app.get("/channels", (req, res) => {
   });
 });
 
+/* ADD CHANNEL */
 app.post("/channels", (req, res) => {
 
   const { name } = req.body;
@@ -196,6 +197,7 @@ app.post("/channels", (req, res) => {
 });
 
 
+/* DELETE CHANNEL */
 app.delete("/channels/:name", (req, res) => {
   const name = req.params.name;
 
@@ -210,6 +212,28 @@ app.delete("/channels/:name", (req, res) => {
       res.sendStatus(200);
     });
 
+  });
+});
+
+
+/* RENAME CHANNEL */
+app.patch("/channels/:name", (req, res) => {
+  const oldName = req.params.name;
+  const { name: newName } = req.body;
+
+  if (!newName) return res.status(400).json({ error: "Name required" });
+
+  db.get("SELECT * FROM channels WHERE name=?", [oldName], (err, row) => {
+    if (!row) return res.status(404).json({ error: "Channel not found" });
+
+    db.run("UPDATE channels SET name=? WHERE name=?", [newName, oldName], (err) => {
+      if (err) return res.status(400).json({ error: "Channel name already exists" });
+
+      db.run("UPDATE items SET channel=? WHERE channel=?", [newName, oldName], () => {
+        io.emit("channel-renamed", { oldName, newName });
+        res.json({ oldName, newName });
+      });
+    });
   });
 });
 

@@ -599,6 +599,14 @@
       renderChannels();
       highlight();
     });
+
+    socket.on("channel-renamed", ({ oldName, newName }) => {
+      channels = channels.map(c => c === oldName ? newName : c);
+      if (channel === oldName) channel = newName;
+      renderChannels();
+      highlight();
+    });
+
     document.getElementById("search").addEventListener("input", async e => {
       const q = e.target.value.trim();
 
@@ -758,6 +766,32 @@
               load();
             }
           };
+
+          const rename = document.createElement("span");
+          rename.innerText = " ✎";
+          rename.title = "Rename";
+          rename.style.marginLeft = "4px";
+          rename.style.cursor = "pointer";
+
+          rename.onclick = async (e) => {
+            e.stopPropagation();
+            const newName = prompt("Rename channel to:", ch);
+            if (!newName || newName === ch) return;
+
+            const res = await fetch("/channels/" + ch, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ name: newName })
+            });
+
+            if (!res.ok) {
+              const err = await res.json();
+              alert(err.error);
+              return;
+            }
+          };
+
+          btn.appendChild(rename);
 
           btn.appendChild(del);
         }
