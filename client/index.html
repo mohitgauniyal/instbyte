@@ -142,26 +142,111 @@
     .icon-btn.delete:hover {
       background: #fee2e2;
     }
+
+    .app-header {
+      background: #ffffff;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo {
+      height: 24px;
+    }
+
+    .app-name {
+      font-weight: 600;
+      font-size: 15px;
+      color: #111827;
+    }
+
+    .header-center {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+    }
+
+    .search-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 420px;
+    }
+
+    .search-wrapper input {
+      width: 100%;
+      padding: 8px 12px 8px 32px;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      background: #f9fafb;
+      font-size: 14px;
+    }
+
+    .search-wrapper input:focus {
+      outline: none;
+      border-color: #d1d5db;
+      background: #ffffff;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 14px;
+      color: #9ca3af;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .link-btn {
+      background: none;
+      border: none;
+      color: #6b7280;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .link-btn:hover {
+      color: #111827;
+    }
   </style>
 </head>
 
 <body>
 
-  <header style="display:flex;justify-content:space-between;align-items:center">
-    <div style="display:flex;align-items:center;gap:10px;">
-      <img src="/assets/logo.png" style="height:26px">
-      <span style="color:#111827">Instbyte</span>
-
+  <header class="app-header">
+    <div class="header-left">
+      <img src="/assets/logo.png" class="logo">
+      <span class="app-name">Instbyte</span>
     </div>
 
+    <div class="header-center">
+      <div class="search-wrapper">
+        <span class="search-icon">🔍</span>
+        <input id="search" type="text" placeholder="Search across channels...">
+      </div>
+    </div>
 
-    <div style="font-size:13px">
+    <div class="header-right">
       <span id="who"></span>
-      <button onclick="changeName()" style="margin-left:8px;background:#374151;padding:6px 10px;font-size:12px">
-        change
-      </button>
+      <button onclick="changeName()" class="link-btn">change</button>
     </div>
   </header>
+
 
 
 
@@ -174,10 +259,6 @@
         <button onclick="setChannel('design')" id="ch-design">Design</button>
         <button onclick="setChannel('temp')" id="ch-temp">Temp</button>
       </div>
-    </div>
-
-    <div style="margin-top:10px;">
-      <input id="search" placeholder="Search…" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd">
     </div>
 
     <div class="composer">
