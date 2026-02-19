@@ -136,6 +136,20 @@ app.get("/search/:channel/:q", (req, res) => {
   );
 });
 
+/* GLOBAL SEARCH */
+app.get("/search/:q", (req, res) => {
+  const q = req.params.q;
+
+  db.all(
+    `SELECT * FROM items 
+     WHERE content LIKE ? OR filename LIKE ?
+     ORDER BY channel ASC, pinned DESC, created_at DESC`,
+    [`%${q}%`, `%${q}%`],
+    (err, rows) => {
+      res.json(rows);
+    }
+  );
+});
 
 
 /* ============================
@@ -165,7 +179,7 @@ io.on("connection", (socket) => {
    SHOW LOCAL + LAN URL
 ============================ */
 
-function getLocalIP(){
+function getLocalIP() {
   const nets = os.networkInterfaces();
   for (const name of Object.keys(nets)) {
     for (const net of nets[name]) {

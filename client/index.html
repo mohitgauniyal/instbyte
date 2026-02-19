@@ -316,6 +316,72 @@
       });
     }
 
+    function renderGrouped(data) {
+      const el = document.getElementById("items");
+      el.innerHTML = "";
+
+      if (!data.length) {
+        el.innerHTML = "<div style='color:#6b7280;margin-top:10px;'>No results</div>";
+        return;
+      }
+
+      // group by channel
+      const grouped = {};
+      data.forEach(item => {
+        if (!grouped[item.channel]) grouped[item.channel] = [];
+        grouped[item.channel].push(item);
+      });
+
+      Object.keys(grouped).forEach(ch => {
+        const section = document.createElement("div");
+        section.style.marginTop = "20px";
+
+        section.innerHTML = `
+      <div style="font-size:13px;font-weight:600;color:#6b7280;margin-bottom:8px;">
+        ${ch.toUpperCase()}
+      </div>
+    `;
+
+        grouped[ch].forEach(i => {
+          const div = document.createElement("div");
+          div.className = "item";
+
+          let content = "";
+
+          if (i.type === "file") {
+            const isImg = i.filename.match(/\.(jpg|png|jpeg|gif)$/i);
+            if (isImg) {
+              content = `<img src="/uploads/${i.filename}" style="max-width:200px;border-radius:6px"><br>
+          <a href="/uploads/${i.filename}" target="_blank">${i.filename}</a>`;
+            } else {
+              content = `<a href="/uploads/${i.filename}" target="_blank">${i.filename}</a>`;
+            }
+          } else {
+            const isLink = i.content.startsWith("http");
+            if (isLink) {
+              content = `<a href="${i.content}" target="_blank">${i.content}</a>`;
+            } else {
+              content = i.content;
+            }
+          }
+
+          div.innerHTML = `
+        <div class="left">
+          ${content}
+          <div class="meta">${i.uploader}</div>
+        </div>
+        <div class="item-actions">
+          <button class="icon-btn" onclick="pin(${i.id})">${i.pinned ? "📍" : "📌"}</button>
+          <button class="icon-btn delete" onclick="del(${i.id})">🗑</button>
+        </div>
+      `;
+
+          section.appendChild(div);
+        });
+
+        el.appendChild(section);
+      });
+    }
 
     async function sendText() {
       const input = document.getElementById("msg");
@@ -372,14 +438,22 @@
 
     document.getElementById("search").addEventListener("input", async e => {
       const q = e.target.value.trim();
+
       if (!q) {
+        highlight();
         load();
         return;
       }
-      const res = await fetch(`/search/${channel}/${q}`);
+
+      // remove active tab highlight while searching
+      document.querySelectorAll(".channels button")
+        .forEach(b => b.classList.remove("active"));
+
+      const res = await fetch(`/search/${q}`);
       const data = await res.json();
-      render(data);
+      renderGrouped(data);
     });
+
 
     document.addEventListener("paste", async e => {
       const active = document.activeElement;
