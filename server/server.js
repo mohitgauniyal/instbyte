@@ -226,6 +226,19 @@ app.delete("/channels/:name", (req, res) => {
   });
 });
 
+/* MOVE ROW */
+app.patch("/item/:id/move", (req, res) => {
+  const { id } = req.params;
+  const { channel } = req.body;
+
+  if (!channel) return res.status(400).json({ error: "Channel required" });
+
+  db.run("UPDATE items SET channel=? WHERE id=?", [channel, id], function (err) {
+    if (err) return res.status(500).json({ error: "Move failed" });
+    io.emit("item-moved", { id: parseInt(id), channel });
+    res.json({ id, channel });
+  });
+});
 
 /* RENAME CHANNEL */
 app.patch("/channels/:name", (req, res) => {

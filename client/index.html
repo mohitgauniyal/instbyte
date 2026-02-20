@@ -350,6 +350,56 @@
     .qr-toggle:hover {
       background: #1f2937;
     }
+
+    .move-wrapper {
+      position: relative;
+    }
+
+    .move-dropdown {
+      position: absolute;
+      bottom: calc(100% + 6px);
+      right: 0;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+      z-index: 100;
+      min-width: 130px;
+      overflow: hidden;
+      display: none;
+    }
+
+    .move-dropdown.open {
+      display: block;
+    }
+
+    .move-dropdown button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      background: none;
+      border: none;
+      padding: 9px 14px;
+      font-size: 13px;
+      color: #374151;
+      cursor: pointer;
+      border-radius: 0;
+    }
+
+    .move-dropdown button:hover {
+      background: #f3f4f6;
+      color: #111827;
+    }
+
+    .move-dropdown .dropdown-label {
+      font-size: 11px;
+      color: #9ca3af;
+      padding: 8px 14px 4px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      cursor: default;
+    }
   </style>
 </head>
 
@@ -477,6 +527,61 @@
       }
     }
 
+    let openDropdown = null;
+
+    function toggleMoveDropdown(e, id, currentChannel) {
+      e.stopPropagation();
+
+      // close any open one first
+      if (openDropdown && openDropdown !== e.currentTarget.nextElementSibling) {
+        openDropdown.classList.remove("open");
+      }
+
+      const dropdown = e.currentTarget.nextElementSibling;
+      const isOpen = dropdown.classList.contains("open");
+
+      if (isOpen) {
+        dropdown.classList.remove("open");
+        openDropdown = null;
+        return;
+      }
+
+      // build channel list fresh each time (channels may have changed)
+      const others = channels.filter(c => c !== currentChannel);
+      dropdown.innerHTML = `<div class="dropdown-label">Move to</div>`;
+
+      others.forEach(ch => {
+        const btn = document.createElement("button");
+        btn.innerText = ch;
+        btn.onclick = (ev) => {
+          ev.stopPropagation();
+          moveItem(id, ch);
+          dropdown.classList.remove("open");
+          openDropdown = null;
+        };
+        dropdown.appendChild(btn);
+      });
+
+      dropdown.classList.add("open");
+      openDropdown = dropdown;
+    }
+
+    async function moveItem(id, toChannel) {
+      await fetch(`/item/${id}/move`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channel: toChannel })
+      });
+      // socket will handle the re-render via item-moved event
+    }
+
+    document.addEventListener("click", () => {
+      if (openDropdown) {
+        openDropdown.classList.remove("open");
+        openDropdown = null;
+      }
+    });
+
     let channel = null;
     let channels = [];
 
@@ -563,6 +668,11 @@
         <button class="icon-btn" onclick="pin(${i.id})" title="pin">
           ${i.pinned ? "📍" : "📌"}
         </button>
+        <div class="move-wrapper">
+          <button class="icon-btn" title="move to channel"
+            onclick="toggleMoveDropdown(event, ${i.id}, '${i.channel}')">⇄</button>
+          <div class="move-dropdown"></div>
+        </div>
         <button class="icon-btn delete" onclick="del(${i.id})" title="delete">
           🗑
         </button>
@@ -646,6 +756,11 @@
         <button class="icon-btn" onclick="pin(${i.id})" title="pin">
           ${i.pinned ? "📍" : "📌"}
         </button>
+        <div class="move-wrapper">
+          <button class="icon-btn" title="move to channel"
+            onclick="toggleMoveDropdown(event, ${i.id}, '${i.channel}')">⇄</button>
+          <div class="move-dropdown"></div>
+        </div>
         <button class="icon-btn delete" onclick="del(${i.id})" title="delete">
           🗑
         </button>
@@ -733,6 +848,13 @@
 
     socket.on("delete-item", id => {
       load();
+    });
+
+    socket.on("item-moved", ({ id, channel: toChannel }) => {
+      if (toChannel !== channel) {
+        // item left this channel — remove it from view
+        load();
+      }
     });
 
     socket.on("channel-added", async ({ name }) => {
