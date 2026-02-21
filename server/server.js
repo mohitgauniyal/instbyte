@@ -165,7 +165,7 @@ app.get("/search/:q", (req, res) => {
 });
 
 app.get("/channels", (req, res) => {
-  db.all("SELECT * FROM channels ORDER BY id ASC", (err, rows) => {
+  db.all("SELECT * FROM channels ORDER BY pinned DESC, id ASC", (err, rows) => {
     res.json(rows);
   });
 });
@@ -201,28 +201,34 @@ app.post("/channels", (req, res) => {
 app.delete("/channels/:name", (req, res) => {
   const name = req.params.name;
 
-  db.get("SELECT COUNT(*) as count FROM channels", (err, row) => {
+  db.get("SELECT * FROM channels WHERE name=?", [name], (err, ch) => {
+    if (!ch) return res.status(404).json({ error: "Channel not found" });
 
-    if (row.count <= 1) {
-      return res.status(400).json({ error: "At least one channel required" });
+    if (ch.pinned) {
+      return res.status(403).json({ error: "Unpin this channel before deleting" });
     }
 
-    db.all("SELECT * FROM items WHERE channel=?", [name], (err, rows) => {
-      rows.forEach(item => {
-        if (item.filename) {
-          const filePath = path.join(__dirname, "../uploads", item.filename);
-          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-        }
-      });
+    db.get("SELECT COUNT(*) as count FROM channels", (err, row) => {
+      if (row.count <= 1) {
+        return res.status(400).json({ error: "At least one channel required" });
+      }
 
-      db.run("DELETE FROM items WHERE channel=?", [name], () => {
-        db.run("DELETE FROM channels WHERE name=?", [name], () => {
-          io.emit("channel-deleted", { name });
-          res.sendStatus(200);
+      db.all("SELECT * FROM items WHERE channel=?", [name], (err, rows) => {
+        rows.forEach(item => {
+          if (item.filename) {
+            const filePath = path.join(__dirname, "../uploads", item.filename);
+            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+          }
+        });
+
+        db.run("DELETE FROM items WHERE channel=?", [name], () => {
+          db.run("DELETE FROM channels WHERE name=?", [name], () => {
+            io.emit("channel-deleted", { name });
+            res.sendStatus(200);
+          });
         });
       });
     });
-
   });
 });
 
@@ -261,6 +267,20 @@ app.patch("/channels/:name", (req, res) => {
   });
 });
 
+/* PIN CHANNEL */
+app.post("/channels/:name/pin", (req, res) => {
+  db.run(
+    `UPDATE channels SET pinned = CASE WHEN pinned=1 THEN 0 ELSE 1 END WHERE name=?`,
+    [req.params.name],
+    function (err) {
+      if (err) return res.status(500).json({ error: "Pin failed" });
+      db.get("SELECT pinned FROM channels WHERE name=?", [req.params.name], (err, row) => {
+        io.emit("channel-pin-update", { name: req.params.name, pinned: row.pinned });
+        res.json({ pinned: row.pinned });
+      });
+    }
+  );
+});
 
 
 /*  */

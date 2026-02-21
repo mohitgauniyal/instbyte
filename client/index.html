@@ -40,9 +40,13 @@
     }
 
     .channels button {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 4px;
       background: transparent;
       border: none;
-      padding: 8px 16px;
+      padding: 7px 12px;
       border-radius: 10px;
       cursor: pointer;
       font-size: 14px;
@@ -400,6 +404,99 @@
       letter-spacing: 0.05em;
       cursor: default;
     }
+
+    .ch-pin-dot {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      background: #f59e0b;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .ch-more {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      font-size: 13px;
+      color: #6b7280;
+      opacity: 0;
+      transition: opacity 0.12s ease, background 0.12s ease;
+      margin-left: 2px;
+      line-height: 1;
+    }
+
+    .channels button:hover .ch-more,
+    .channels button.active .ch-more {
+      opacity: 1;
+    }
+
+    .ch-more:hover {
+      background: rgba(0, 0, 0, 0.1);
+      color: #111827;
+    }
+
+    .context-menu {
+      position: fixed;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+      z-index: 9999;
+      min-width: 170px;
+      overflow: hidden;
+      display: none;
+      padding: 4px;
+    }
+
+    .context-menu.open {
+      display: block;
+    }
+
+    .context-menu button {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      text-align: left;
+      background: none;
+      border: none;
+      padding: 8px 12px;
+      font-size: 13px;
+      color: #374151;
+      cursor: pointer;
+      border-radius: 6px;
+    }
+
+    .context-menu button:hover {
+      background: #f3f4f6;
+    }
+
+    .context-menu button.danger {
+      color: #b91c1c;
+    }
+
+    .context-menu button.danger:hover {
+      background: #fee2e2;
+    }
+
+    .context-menu button.muted {
+      color: #9ca3af;
+      cursor: not-allowed;
+    }
+
+    .context-menu button.muted:hover {
+      background: none;
+    }
+
+    .context-menu .menu-divider {
+      height: 1px;
+      background: #f3f4f6;
+      margin: 4px 0;
+    }
   </style>
 </head>
 
@@ -492,6 +589,8 @@
     <button class="qr-toggle" onclick="toggleQR()">📡 Join</button>
   </div>
 
+  <div class="context-menu" id="channelMenu"></div>
+
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
@@ -547,15 +646,15 @@
       }
 
       // build channel list fresh each time (channels may have changed)
-      const others = channels.filter(c => c !== currentChannel);
+      const others = channels.filter(c => c.name !== currentChannel);
       dropdown.innerHTML = `<div class="dropdown-label">Move to</div>`;
 
       others.forEach(ch => {
         const btn = document.createElement("button");
-        btn.innerText = ch;
+        btn.innerText = ch.name;
         btn.onclick = (ev) => {
           ev.stopPropagation();
-          moveItem(id, ch);
+          moveItem(id, ch.name);
           dropdown.classList.remove("open");
           openDropdown = null;
         };
@@ -599,7 +698,8 @@
     function highlight() {
       document.querySelectorAll(".channels button")
         .forEach(b => b.classList.remove("active"));
-      document.getElementById("ch-" + channel).classList.add("active");
+      const el = document.getElementById("ch-" + channel);
+      if (el) el.classList.add("active");
     }
 
     function setChannel(c) {
@@ -857,17 +957,17 @@
       }
     });
 
-    socket.on("channel-added", async ({ name }) => {
-      if (!channels.includes(name)) {
-        channels.push(name);
+    socket.on("channel-added", (ch) => {
+      if (!channels.find(c => c.name === ch.name)) {
+        channels.push(ch);
         renderChannels();
       }
     });
 
-    socket.on("channel-deleted", async ({ name }) => {
-      channels = channels.filter(c => c !== name);
+    socket.on("channel-deleted", ({ name }) => {
+      channels = channels.filter(c => c.name !== name);
       if (channel === name) {
-        channel = channels[0];
+        channel = channels.length ? channels[0].name : null;
         load();
       }
       renderChannels();
@@ -875,8 +975,14 @@
     });
 
     socket.on("channel-renamed", ({ oldName, newName }) => {
-      channels = channels.map(c => c === oldName ? newName : c);
+      channels = channels.map(c => c.name === oldName ? { ...c, name: newName } : c);
       if (channel === oldName) channel = newName;
+      renderChannels();
+      highlight();
+    });
+
+    socket.on("channel-pin-update", ({ name, pinned }) => {
+      channels = channels.map(c => c.name === name ? { ...c, pinned } : c);
       renderChannels();
       highlight();
     });
@@ -986,8 +1092,8 @@
     async function loadChannels() {
       const res = await fetch("/channels");
       const data = await res.json();
-      channels = data.map(c => c.name);
-      if (!channel && channels.length) channel = channels[0];
+      channels = data; // [{ id, name, pinned }]
+      if (!channel && channels.length) channel = channels[0].name;
       renderChannels();
       highlight();
     }
@@ -998,87 +1104,46 @@
 
       channels.forEach(ch => {
         const btn = document.createElement("button");
-        btn.innerText = ch;
-        btn.id = "ch-" + ch;
-        btn.onclick = () => setChannel(ch);
+        btn.id = "ch-" + ch.name;
 
-        if (ch === channel) {
-          const del = document.createElement("span");
-          del.innerText = " ×";
-          del.style.marginLeft = "6px";
-          del.style.cursor = "pointer";
-          del.style.fontWeight = "500";
+        btn.onclick = (e) => {
+          if (e.target.classList.contains("ch-more")) return;
+          setChannel(ch.name);
+        };
 
-          del.onclick = async (e) => {
-            e.stopPropagation();
+        btn.appendChild(document.createTextNode(ch.name));
 
-            const confirmDelete = confirm(
-              `Delete "${ch}"? All items in this channel will be permanently removed.`
-            );
-            if (!confirmDelete) return;
-
-            const res = await fetch("/channels/" + ch, {
-              method: "DELETE"
-            });
-
-            if (!res.ok) {
-              const err = await res.json();
-              alert(err.error);
-              return;
-            }
-
-            await loadChannels();
-
-            if (channel === ch) {
-              channel = channels[0];
-              load();
-            }
-          };
-
-          const rename = document.createElement("span");
-          rename.innerText = " ✎";
-          rename.title = "Rename";
-          rename.style.marginLeft = "4px";
-          rename.style.cursor = "pointer";
-
-          rename.onclick = async (e) => {
-            e.stopPropagation();
-            const newName = prompt("Rename channel to:", ch);
-            if (!newName || newName === ch) return;
-
-            const res = await fetch("/channels/" + ch, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ name: newName })
-            });
-
-            if (!res.ok) {
-              const err = await res.json();
-              alert(err.error);
-              return;
-            }
-          };
-
-          btn.appendChild(rename);
-
-          btn.appendChild(del);
+        if (ch.pinned) {
+          const dot = document.createElement("span");
+          dot.className = "ch-pin-dot";
+          dot.title = "Pinned — protected from deletion";
+          btn.appendChild(dot);
         }
 
+        const more = document.createElement("span");
+        more.className = "ch-more";
+        more.innerText = "⋯";
+        more.title = "Channel options";
+        more.onclick = (e) => {
+          e.stopPropagation();
+          showChannelMenu(e, ch);
+        };
+        btn.appendChild(more);
+
+        btn.addEventListener("contextmenu", (e) => {
+          e.preventDefault();
+          showChannelMenu(e, ch);
+        });
+
+        if (ch.name === channel) btn.classList.add("active");
         container.appendChild(btn);
       });
 
-      // Add + tab
       const addBtn = document.createElement("button");
       addBtn.innerText = "+";
       addBtn.className = "add-channel";
-
       addBtn.onclick = async () => {
-
-        if (channels.length >= 10) {
-          alert("Maximum 10 channels allowed");
-          return;
-        }
-
+        if (channels.length >= 10) { alert("Maximum 10 channels allowed"); return; }
         const name = prompt("Channel name?");
         if (!name) return;
 
@@ -1088,16 +1153,73 @@
           body: JSON.stringify({ name })
         });
 
-        if (!res.ok) {
-          const err = await res.json();
-          alert(err.error);
-          return;
-        }
-
+        if (!res.ok) { const err = await res.json(); alert(err.error); return; }
         await loadChannels();
       };
 
       container.appendChild(addBtn);
+    }
+
+    function showChannelMenu(e, ch) {
+      const menu = document.getElementById("channelMenu");
+
+      menu.innerHTML = `
+    <button onclick="toggleChannelPin('${ch.name}')">
+      ${ch.pinned ? "📍 Unpin channel" : "📌 Pin channel"}
+    </button>
+    <div class="menu-divider"></div>
+    <button onclick="renameChannelPrompt('${ch.name}')">✎&nbsp; Rename</button>
+    <button class="${ch.pinned ? "muted" : "danger"}"
+      ${ch.pinned ? "" : `onclick="deleteChannel('${ch.name}')"`}>
+      🗑&nbsp; Delete${ch.pinned ? " (pinned)" : ""}
+    </button>
+  `;
+
+      menu.style.top = e.clientY + "px";
+      menu.style.left = e.clientX + "px";
+      menu.classList.add("open");
+
+      requestAnimationFrame(() => {
+        const rect = menu.getBoundingClientRect();
+        if (rect.right > window.innerWidth - 8)
+          menu.style.left = (e.clientX - rect.width) + "px";
+        if (rect.bottom > window.innerHeight - 8)
+          menu.style.top = (e.clientY - rect.height) + "px";
+      });
+    }
+
+    document.addEventListener("click", () => {
+      document.getElementById("channelMenu").classList.remove("open");
+    });
+
+    document.addEventListener("contextmenu", (e) => {
+      if (!e.target.closest("#channels"))
+        document.getElementById("channelMenu").classList.remove("open");
+    });
+
+    async function toggleChannelPin(name) {
+      await fetch(`/channels/${name}/pin`, { method: "POST" });
+    }
+
+    async function renameChannelPrompt(name) {
+      const newName = prompt("Rename channel to:", name);
+      if (!newName || newName.trim() === name) return;
+
+      const res = await fetch("/channels/" + name, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newName.trim() })
+      });
+
+      if (!res.ok) { const err = await res.json(); alert(err.error); }
+    }
+
+    async function deleteChannel(name) {
+      const confirmed = confirm(`Delete "${name}"? All items will be permanently removed.`);
+      if (!confirmed) return;
+
+      const res = await fetch("/channels/" + name, { method: "DELETE" });
+      if (!res.ok) { const err = await res.json(); alert(err.error); }
     }
 
     /* DRAG OVER */
