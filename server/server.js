@@ -285,7 +285,7 @@ app.post("/channels/:name/pin", (req, res) => {
 
 /*  */
 app.get("/info", (req, res) => {
-  res.json({ url: `http://${localIP}:${PORT}` });
+  res.json({ url: `http://${localIP}:${PORT}`, hostname: os.hostname() });
 });
 
 /* ============================

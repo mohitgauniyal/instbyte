@@ -684,16 +684,22 @@
     let channel = null;
     let channels = [];
 
-    let uploader = localStorage.getItem("name");
+    let uploader = localStorage.getItem("name") || "";
 
-    if (!uploader || uploader === "null" || uploader.trim() === "") {
-      uploader = prompt("Your name?");
-      if (!uploader) uploader = "anon";
-      localStorage.setItem("name", uploader);
+    async function initName() {
+      if (!uploader || uploader === "null" || uploader.trim() === "") {
+        let suggested = "USER-" + Math.floor(Math.random() * 1000);
+        try {
+          const res = await fetch("/info");
+          const info = await res.json();
+          if (info.hostname) suggested = info.hostname;
+        } catch (e) { }
+        uploader = prompt("Your name?", suggested) || suggested;
+        localStorage.setItem("name", uploader);
+      }
+      document.getElementById("who").innerText = "You: " + uploader;
+      socket.emit("join", uploader);
     }
-
-    document.getElementById("who").innerText = "You: " + uploader;
-    socket.emit("join", uploader);
 
     function highlight() {
       document.querySelectorAll(".channels button")
@@ -1245,6 +1251,7 @@
     });
 
     (async function init() {
+      await initName();
       await loadChannels();
       load();
     })();
