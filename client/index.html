@@ -1101,10 +1101,14 @@
 
         div.innerHTML = `
   <div class="item-top">
-    <div class="left">
-      ${content}
-      <div class="meta">${i.uploader}</div>
-    </div>
+    <div class="left"
+     data-tooltip="${i.type === 'file' ? 'Click to download' : 'Click to copy'}"
+     onclick="${i.type === 'file'
+            ? `togglePreview(${i.id}, '${i.filename}')`
+            : `handleRowClick(this, 'text', '${(i.content || '').replace(/'/g, "\\'")}')`}">
+  ${content}
+  <div class="meta">${i.uploader}</div>
+</div>
     <div class="item-actions">
       ${getPreviewType(i.filename) !== "none"
             ? `<button class="icon-btn" id="prevbtn-${i.id}"
@@ -1193,10 +1197,14 @@
 
           div.innerHTML = `
   <div class="item-top">
-    <div class="left">
-      ${content}
-      <div class="meta">${i.uploader}</div>
-    </div>
+    <div class="left"
+     data-tooltip="${i.type === 'file' ? 'Click to download' : 'Click to copy'}"
+     onclick="${i.type === 'file'
+              ? `togglePreview(${i.id}, '${i.filename}')`
+              : `handleRowClick(this, 'text', '${(i.content || '').replace(/'/g, "\\'")}')`}">
+  ${content}
+  <div class="meta">${i.uploader}</div>
+</div>
     <div class="item-actions">
       ${getPreviewType(i.filename) !== "none"
               ? `<button class="icon-btn" id="prevbtn-${i.id}"
