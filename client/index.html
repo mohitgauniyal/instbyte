@@ -108,6 +108,11 @@
       margin-top: 10px;
       border-radius: 8px;
       display: flex;
+      flex-direction: column;
+    }
+
+    .item-top {
+      display: flex;
       justify-content: space-between;
       align-items: center;
     }
@@ -555,6 +560,101 @@
       margin: 4px 0;
       padding-left: 20px;
     }
+
+    .preview-panel {
+      display: none;
+      margin-top: 10px;
+      border-top: 1px solid #f3f4f6;
+      padding-top: 10px;
+    }
+
+    .preview-panel.open {
+      display: block;
+    }
+
+    .preview-panel img {
+      max-width: 100%;
+      border-radius: 6px;
+      display: block;
+    }
+
+    .preview-panel video,
+    .preview-panel audio {
+      width: 100%;
+      border-radius: 6px;
+      outline: none;
+    }
+
+    .preview-panel audio {
+      width: 100%;
+      height: 40px;
+    }
+
+    .preview-panel embed,
+    .preview-panel iframe {
+      width: 100%;
+      height: 480px;
+      border: none;
+      border-radius: 6px;
+      background: #f9fafb;
+    }
+
+    .preview-panel pre {
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 12px;
+      overflow-x: auto;
+      max-height: 400px;
+      overflow-y: auto;
+      margin: 0;
+      font-size: 12px;
+      font-family: ui-monospace, monospace;
+      line-height: 1.5;
+    }
+
+    .preview-panel pre code {
+      background: none;
+      padding: 0;
+      font-size: 12px;
+    }
+
+    .preview-truncated {
+      font-size: 11px;
+      color: #9ca3af;
+      margin-top: 6px;
+      text-align: right;
+    }
+
+    .preview-error {
+      font-size: 13px;
+      color: #9ca3af;
+      padding: 12px 0;
+    }
+
+    .preview-loading {
+      font-size: 13px;
+      color: #9ca3af;
+      padding: 12px 0;
+    }
+
+    .icon-btn.preview-active {
+      background: #eff6ff;
+      border-color: #bfdbfe;
+      color: #1d4ed8;
+    }
+
+    /* Make item flex-direction column to allow panel below content */
+    .item {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .item-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
   </style>
 </head>
 
@@ -696,6 +796,155 @@
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
         .replace(/\n/g, "<br>");
+    }
+
+    const TEXT_EXTENSIONS = [
+      'txt', 'md', 'js', 'ts', 'jsx', 'tsx', 'json', 'json5',
+      'css', 'html', 'htm', 'xml', 'svg', 'sh', 'bash', 'zsh',
+      'py', 'rb', 'php', 'java', 'c', 'cpp', 'h', 'cs', 'go',
+      'rs', 'swift', 'kt', 'yaml', 'yml', 'toml', 'ini', 'env',
+      'gitignore', 'dockerfile', 'sql', 'csv', 'log'
+    ];
+
+    const MAX_TEXT_PREVIEW_BYTES = 50 * 1024; // 50KB — beyond this we warn
+    const MAX_TEXT_LINES = 200;
+
+    function getPreviewType(filename) {
+      if (!filename) return "none";
+      const ext = filename.split(".").pop().toLowerCase();
+      if (/^(jpg|jpeg|png|gif|webp|bmp|svg)$/.test(ext)) return "image";
+      if (/^(mp4|webm|ogg|mov)$/.test(ext)) return "video";
+      if (/^(mp3|wav|ogg|m4a|flac|aac)$/.test(ext)) return "audio";
+      if (ext === "pdf") return "pdf";
+      if (TEXT_EXTENSIONS.includes(ext)) return "text";
+      return "none";
+    }
+
+    function getLanguage(filename) {
+      const ext = filename.split(".").pop().toLowerCase();
+      const map = {
+        js: "javascript", ts: "typescript", jsx: "javascript",
+        tsx: "typescript", py: "python", rb: "ruby", php: "php",
+        java: "java", c: "c", cpp: "cpp", h: "c", cs: "csharp",
+        go: "go", rs: "rust", swift: "swift", kt: "kotlin",
+        html: "html", htm: "html", css: "css", json: "json",
+        json5: "json", xml: "xml", svg: "xml", sh: "bash",
+        bash: "bash", zsh: "bash", yaml: "yaml", yml: "yaml",
+        toml: "toml", sql: "sql", md: "markdown", csv: "plaintext",
+        txt: "plaintext", log: "plaintext", env: "plaintext",
+        dockerfile: "dockerfile"
+      };
+      return map[ext] || "plaintext";
+    }
+
+    let openPreviewId = null;
+
+    async function togglePreview(id, filename) {
+      const panel = document.getElementById("preview-" + id);
+      const btn = document.getElementById("prevbtn-" + id);
+      if (!panel || !btn) return;
+
+      const isOpen = panel.classList.contains("open");
+
+      // Close any other open preview first
+      if (openPreviewId && openPreviewId !== id) {
+        const otherPanel = document.getElementById("preview-" + openPreviewId);
+        const otherBtn = document.getElementById("prevbtn-" + openPreviewId);
+        if (otherPanel) otherPanel.classList.remove("open");
+        if (otherBtn) otherBtn.classList.remove("preview-active");
+      }
+
+      if (isOpen) {
+        panel.classList.remove("open");
+        btn.classList.remove("preview-active");
+        openPreviewId = null;
+        return;
+      }
+
+      // Open this one
+      panel.classList.add("open");
+      btn.classList.add("preview-active");
+      openPreviewId = id;
+
+      // Only build content once
+      if (panel.dataset.loaded) return;
+      panel.dataset.loaded = "true";
+
+      const type = getPreviewType(filename);
+      const url = `/uploads/${filename}`;
+
+      if (type === "image") {
+        panel.innerHTML = `<img src="${url}" alt="${filename}">`;
+
+      } else if (type === "video") {
+        panel.innerHTML = `
+      <video controls preload="metadata">
+        <source src="${url}">
+        Your browser doesn't support video preview.
+      </video>`;
+
+      } else if (type === "audio") {
+        panel.innerHTML = `
+      <audio controls preload="metadata">
+        <source src="${url}">
+        Your browser doesn't support audio preview.
+      </audio>`;
+
+      } else if (type === "pdf") {
+        panel.innerHTML = `<embed src="${url}" type="application/pdf">`;
+
+      } else if (type === "text") {
+        panel.innerHTML = `<div class="preview-loading">Loading...</div>`;
+
+        try {
+          const res = await fetch(url);
+
+          if (!res.ok) throw new Error("Failed to load");
+
+          // Check size via content-length header before reading
+          const contentLength = res.headers.get("content-length");
+          if (contentLength && parseInt(contentLength) > MAX_TEXT_PREVIEW_BYTES) {
+            panel.innerHTML = `
+          <div class="preview-error">
+            File is too large to preview (${formatSize(parseInt(contentLength))}).
+            <a href="${url}" target="_blank">Open in new tab</a>
+          </div>`;
+            return;
+          }
+
+          const text = await res.text();
+          const lines = text.split("\n");
+          const truncated = lines.length > MAX_TEXT_LINES;
+          const preview = truncated
+            ? lines.slice(0, MAX_TEXT_LINES).join("\n")
+            : text;
+
+          const lang = getLanguage(filename);
+          const code = document.createElement("code");
+          code.className = `language-${lang}`;
+          code.textContent = preview;
+
+          const pre = document.createElement("pre");
+          pre.appendChild(code);
+          hljs.highlightElement(code);
+
+          panel.innerHTML = "";
+          panel.appendChild(pre);
+
+          if (truncated) {
+            const note = document.createElement("div");
+            note.className = "preview-truncated";
+            note.innerHTML = `Showing first ${MAX_TEXT_LINES} of ${lines.length} lines. <a href="${url}" target="_blank">View full file</a>`;
+            panel.appendChild(note);
+          }
+
+        } catch (err) {
+          panel.innerHTML = `
+        <div class="preview-error">
+          Could not load preview. <a href="${url}" target="_blank">Open directly</a>
+        </div>`;
+        }
+      }
     }
 
     function handleRowClick(el, type, value) {
@@ -851,26 +1100,30 @@
         const tooltip = isFile ? "Click to download" : "Click to copy";
 
         div.innerHTML = `
-      <div class="left" data-tooltip="${tooltip}"
-           onclick="handleRowClick(this, '${isFile ? 'file' : 'text'}', '${clickValue.replace(/'/g, "\\'")}')">
-        ${content}
-        <div class="meta">${i.uploader}</div>
+  <div class="item-top">
+    <div class="left">
+      ${content}
+      <div class="meta">${i.uploader}</div>
+    </div>
+    <div class="item-actions">
+      ${getPreviewType(i.filename) !== "none"
+            ? `<button class="icon-btn" id="prevbtn-${i.id}"
+             onclick="togglePreview(${i.id}, '${i.filename}')"
+             title="Preview">👁</button>`
+            : ""}
+      <button class="icon-btn" onclick="pin(${i.id})" title="${i.pinned ? 'Unpin' : 'Pin'}">
+        ${i.pinned ? "📍" : "📌"}
+      </button>
+      <div class="move-wrapper">
+        <button class="icon-btn" title="Move to channel"
+          onclick="toggleMoveDropdown(event, ${i.id}, '${i.channel}')">⇄</button>
+        <div class="move-dropdown"></div>
       </div>
-      <div class="item-actions">
-        <button class="icon-btn" onclick="pin(${i.id})" title="pin">
-          ${i.pinned ? "📍" : "📌"}
-        </button>
-        <div class="move-wrapper">
-          <button class="icon-btn" title="move to channel"
-            onclick="toggleMoveDropdown(event, ${i.id}, '${i.channel}')">⇄</button>
-          <div class="move-dropdown"></div>
-        </div>
-        <button class="icon-btn delete" onclick="del(${i.id})" title="delete">
-          🗑
-        </button>
-      </div>
-    `;
-
+      <button class="icon-btn delete" onclick="del(${i.id})" title="Delete">🗑</button>
+    </div>
+  </div>
+  <div class="preview-panel" id="preview-${i.id}"></div>
+`;
         el.appendChild(div);
       });
     }
@@ -939,25 +1192,30 @@
           const tooltip = isFile ? "Click to download" : "Click to copy";
 
           div.innerHTML = `
-      <div class="left" data-tooltip="${tooltip}"
-           onclick="handleRowClick(this, '${isFile ? 'file' : 'text'}', '${clickValue.replace(/'/g, "\\'")}')">
-        ${content}
-        <div class="meta">${i.uploader}</div>
+  <div class="item-top">
+    <div class="left">
+      ${content}
+      <div class="meta">${i.uploader}</div>
+    </div>
+    <div class="item-actions">
+      ${getPreviewType(i.filename) !== "none"
+              ? `<button class="icon-btn" id="prevbtn-${i.id}"
+             onclick="togglePreview(${i.id}, '${i.filename}')"
+             title="Preview">👁</button>`
+              : ""}
+      <button class="icon-btn" onclick="pin(${i.id})" title="${i.pinned ? 'Unpin' : 'Pin'}">
+        ${i.pinned ? "📍" : "📌"}
+      </button>
+      <div class="move-wrapper">
+        <button class="icon-btn" title="Move to channel"
+          onclick="toggleMoveDropdown(event, ${i.id}, '${i.channel}')">⇄</button>
+        <div class="move-dropdown"></div>
       </div>
-      <div class="item-actions">
-        <button class="icon-btn" onclick="pin(${i.id})" title="pin">
-          ${i.pinned ? "📍" : "📌"}
-        </button>
-        <div class="move-wrapper">
-          <button class="icon-btn" title="move to channel"
-            onclick="toggleMoveDropdown(event, ${i.id}, '${i.channel}')">⇄</button>
-          <div class="move-dropdown"></div>
-        </div>
-        <button class="icon-btn delete" onclick="del(${i.id})" title="delete">
-          🗑
-        </button>
-      </div>
-    `;
+      <button class="icon-btn delete" onclick="del(${i.id})" title="Delete">🗑</button>
+    </div>
+  </div>
+  <div class="preview-panel" id="preview-${i.id}"></div>
+`;
 
           section.appendChild(div);
         });
