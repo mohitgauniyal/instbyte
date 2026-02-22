@@ -6,8 +6,7 @@
 <h1 align="center">Instbyte</h1>
 
 **Instbyte** is a high-speed, real-time, short-lived LAN sharing utility
-built for teams and developers who need to move snippets, links, and
-files across devices instantly — without cloud accounts, logins, or
+built for teams and developers who need to move snippets, links, files, and structured notes across devices instantly — without cloud accounts, logins, or
 external services.
 
 It operates entirely on your local network, acting as a lightweight
@@ -26,9 +25,17 @@ is instantly synchronized across all connected devices.
 - **Manual Upload** — Use the upload button when needed.
 - **Hover Copy Button** — Instantly copy text snippets with visual feedback.
 
+### Rich Text & Code Support
+- Markdown rendering for formatted notes
+- Syntax highlighting for code snippets
+- Ideal for sharing API payloads, logs, and quick technical drafts
+
 ### Dynamic Channel Management
 - Create channels on the fly
 - Rename channels
+- Pin / Unpin important channels
+- Prevent deletion of pinned channels
+- Move items between channels
 - Delete channels (with safety checks)
 - Automatic deletion of channel items when a channel is removed
 - Prevent deletion of the final remaining channel
@@ -47,6 +54,7 @@ Designed for seamless operation across devices connected to the same WiFi or loc
 - Server address displayed directly in the UI
 - Built-in QR code generation for instant device joining
 - Perfect for mobile-to-desktop transfers
+- Optional default username assignment for new users on join
 
 ### Smart Port Handling
 Automatically switches to the next available port if `3000` is already in use.
@@ -55,6 +63,12 @@ Automatically switches to the next available port if `3000` is already in use.
 - File size limits enforced
 - Clear visual size indicators (100MB / 500MB / 1GB thresholds)
 - Upload progress feedback
+
+### Inline File Preview
+- Images preview directly in the interface
+- Video and audio playback without downloading
+- PDF preview inside the browser
+- Text and code files readable inline
 
 ---
 
