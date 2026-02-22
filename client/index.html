@@ -1104,7 +1104,7 @@
     <div class="left"
      data-tooltip="${i.type === 'file' ? 'Click to download' : 'Click to copy'}"
      onclick="${i.type === 'file'
-            ? `togglePreview(${i.id}, '${i.filename}')`
+            ? `handleRowClick(this, 'file', '/uploads/${i.filename}')`
             : `handleRowClick(this, 'text', '${(i.content || '').replace(/'/g, "\\'")}')`}">
   ${content}
   <div class="meta">${i.uploader}</div>
@@ -1200,7 +1200,7 @@
     <div class="left"
      data-tooltip="${i.type === 'file' ? 'Click to download' : 'Click to copy'}"
      onclick="${i.type === 'file'
-              ? `togglePreview(${i.id}, '${i.filename}')`
+              ? `handleRowClick(this, 'file', '/uploads/${i.filename}')`
               : `handleRowClick(this, 'text', '${(i.content || '').replace(/'/g, "\\'")}')`}">
   ${content}
   <div class="meta">${i.uploader}</div>
