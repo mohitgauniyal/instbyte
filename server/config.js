@@ -12,13 +12,6 @@ const defaults = {
     storage: {
         maxFileSize: 2 * 1024 * 1024 * 1024,  // 2GB in bytes
         retention: 24 * 60 * 60 * 1000,        // 24 hours in ms
-    },
-    features: {
-        markdown: true,
-        preview: true,
-        search: true,
-        pinning: true,
-        channelManagement: true
     }
 };
 
@@ -56,8 +49,7 @@ function loadConfig() {
     const config = {
         server: { ...defaults.server, ...(userConfig.server || {}) },
         auth: { ...defaults.auth, ...(userConfig.auth || {}) },
-        storage: { ...defaults.storage, ...(userConfig.storage || {}) },
-        features: { ...defaults.features, ...(userConfig.features || {}) }
+        storage: { ...defaults.storage, ...(userConfig.storage || {}) }
     };
 
     // Parse human-readable values like "500MB" or "48h"

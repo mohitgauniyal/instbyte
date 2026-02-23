@@ -123,13 +123,6 @@ behaviour.
   "storage": {
     "maxFileSize": "2GB",
     "retention": "24h"
-  },
-  "features": {
-    "markdown": true,
-    "preview": true,
-    "search": true,
-    "pinning": true,
-    "channelManagement": true
   }
 }
 ```
@@ -142,11 +135,6 @@ behaviour.
 | `auth.passphrase` | `""` | Shared password for access. Empty = no auth. |
 | `storage.maxFileSize` | `"2GB"` | Max upload size. Accepts `KB`, `MB`, `GB`. |
 | `storage.retention` | `"24h"` | How long before items are auto-deleted. Accepts `h`, `d`. |
-| `features.markdown` | `true` | Markdown and syntax highlighting in text items. |
-| `features.preview` | `true` | Inline file preview for images, video, audio, PDF, code. |
-| `features.search` | `true` | Full-text search across channels. |
-| `features.pinning` | `true` | Pin items and channels. |
-| `features.channelManagement` | `true` | Create, rename, delete channels. |
 
 Only include the keys you want to override. Missing keys fall back to defaults.
 
