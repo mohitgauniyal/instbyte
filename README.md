@@ -59,6 +59,12 @@ Designed for seamless operation across devices connected to the same WiFi or loc
 ### Smart Port Handling
 Automatically switches to the next available port if `3000` is already in use.
 
+### Security & Configuration
+- Optional passphrase protection via `instbyte.config.json`
+- Rate limiting on login attempts (10 per 15 minutes)
+- 7-day session cookie — login once, stay in
+- All behaviour configurable without touching code
+
 ### Improved Upload Validation
 - File size limits enforced
 - Clear visual size indicators (100MB / 500MB / 1GB thresholds)
@@ -79,17 +85,70 @@ Automatically switches to the next available port if `3000` is already in use.
    npm install
    ```
 
-2. **Start the Server**
+2. **(Optional) Create a config file**
+```bash
+   touch instbyte.config.json
+```
+   See the [Configuration](#configuration) section for available options.
+
+3. **Start the Server**
    ```bash
    node server.js
    ```
 
-3. **Access Instbyte**
+4. **Access Instbyte**
    - Local: `http://localhost:<port>`
    - Network: Use the displayed LAN IP or scan the QR code from another device
 
-4. **Share Instantly**
+5. **Share Instantly**
    Type, paste, drag, or upload. Done.
+
+---
+
+## Configuration
+
+Instbyte works out of the box with zero configuration. For teams or advanced
+users, create an `instbyte.config.json` file in the project root to customise
+behaviour.
+
+### Full Example
+```json
+{
+  "server": {
+    "port": 3000
+  },
+  "auth": {
+    "passphrase": "myteam123"
+  },
+  "storage": {
+    "maxFileSize": "2GB",
+    "retention": "24h"
+  },
+  "features": {
+    "markdown": true,
+    "preview": true,
+    "search": true,
+    "pinning": true,
+    "channelManagement": true
+  }
+}
+```
+
+### Options
+
+| Key | Default | Description |
+|---|---|---|
+| `server.port` | `3000` | Port to run on. Overridden by `PORT` env var if set. |
+| `auth.passphrase` | `""` | Shared password for access. Empty = no auth. |
+| `storage.maxFileSize` | `"2GB"` | Max upload size. Accepts `KB`, `MB`, `GB`. |
+| `storage.retention` | `"24h"` | How long before items are auto-deleted. Accepts `h`, `d`. |
+| `features.markdown` | `true` | Markdown and syntax highlighting in text items. |
+| `features.preview` | `true` | Inline file preview for images, video, audio, PDF, code. |
+| `features.search` | `true` | Full-text search across channels. |
+| `features.pinning` | `true` | Pin items and channels. |
+| `features.channelManagement` | `true` | Create, rename, delete channels. |
+
+Only include the keys you want to override. Missing keys fall back to defaults.
 
 ---
 
@@ -125,9 +184,9 @@ See the GitHub [Releases](https://github.com/mohitgauniyal/instbyte/releases) se
 
 Instbyte is designed to remain lightweight and LAN-first.
 
-If you're interested in extending functionality — such as optional
-authentication, configurable cleanup windows, encryption, or UI themes —
-feel free to open an issue or submit a pull request.
+If you're interested in extending functionality — such as CLI companion,
+UI themes, or Single command setup — feel free to open an issue
+or submit a pull request.
 
 ---
 
