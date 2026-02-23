@@ -10,6 +10,8 @@ const multer = require("multer");
 const path = require("path");
 const db = require("./db");
 
+const config = require("./config");
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
@@ -30,8 +32,9 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 2 * 1024 * 1024 * 1024 }
+  limits: { fileSize: config.storage.maxFileSize },
 });
+
 /* FILE UPLOAD */
 app.post("/upload", (req, res) => {
   upload.single("file")(req, res, (err) => {
@@ -338,7 +341,8 @@ function findFreePort(start) {
   });
 }
 
-const PREFERRED = parseInt(process.env.PORT) || 3000;
+const PREFERRED = parseInt(process.env.PORT) || config.server.port;
+
 const localIP = getLocalIP();
 
 let PORT;

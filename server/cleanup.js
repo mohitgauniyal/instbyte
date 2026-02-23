@@ -1,8 +1,9 @@
 const db = require("./db");
 const fs = require("fs");
 const path = require("path");
+const config = require("./config");
 
-const DAY = 24 * 60 * 60 * 1000;
+const DAY = config.storage.retention;
 
 setInterval(() => {
   const cutoff = Date.now() - DAY;
