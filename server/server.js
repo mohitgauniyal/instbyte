@@ -2,6 +2,8 @@ require("./cleanup");
 const fs = require("fs");
 const os = require("os");
 const net = require("net");
+const cookieParser = require("cookie-parser");
+const rateLimit = require("express-rate-limit");
 
 const express = require("express");
 const http = require("http");
@@ -17,6 +19,8 @@ const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
 app.use(express.json());
+app.use(cookieParser());
+app.use(requireAuth);
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 app.use(express.static(path.join(__dirname, "../client")));
 
@@ -34,6 +38,151 @@ const upload = multer({
   storage,
   limits: { fileSize: config.storage.maxFileSize },
 });
+
+
+const COOKIE_NAME = "instbyte_auth";
+const COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+function requireAuth(req, res, next) {
+  if (!config.auth.passphrase) return next(); // no passphrase set, skip
+
+  // Allow the login route itself through
+  if (req.path === "/login" || req.path === "/info") return next();
+
+
+  // Check cookie
+  const cookie = req.cookies[COOKIE_NAME];
+  if (cookie && cookie === config.auth.passphrase) return next();
+
+  // Not authenticated
+  if (req.path.startsWith("/socket.io")) return next();
+  if (req.headers["content-type"] === "application/json" || req.xhr) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  res.redirect("/login");
+}
+
+
+/* LOGIN PAGE */
+app.get("/login", (req, res) => {
+  if (!config.auth.passphrase) return res.redirect("/");
+  if (req.cookies[COOKIE_NAME] === config.auth.passphrase) return res.redirect("/");
+
+  res.send(`<!DOCTYPE html>
+<html>
+<head>
+  <title>Instbyte — Login</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui;
+      background: #f3f4f6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .box {
+      background: #fff;
+      border-radius: 12px;
+      padding: 36px;
+      width: 100%;
+      max-width: 360px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+      text-align: center;
+    }
+    .logo { font-size: 22px; font-weight: 700; color: #111827; margin-bottom: 6px; }
+    .sub  { font-size: 13px; color: #9ca3af; margin-bottom: 28px; }
+    input {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 14px;
+      margin-bottom: 12px;
+      outline: none;
+    }
+    input:focus { border-color: #9ca3af; }
+    button {
+      width: 100%;
+      padding: 11px;
+      background: #111827;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    button:hover { background: #1f2937; }
+    .error {
+      color: #b91c1c;
+      font-size: 13px;
+      margin-top: 10px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <div class="logo">Instbyte</div>
+    <div class="sub">Enter passphrase to continue</div>
+    <input type="password" id="pass" placeholder="Passphrase" autofocus
+      onkeydown="if(event.key==='Enter') submit()">
+    <button onclick="submit()">Continue</button>
+    <div class="error" id="err">Incorrect passphrase</div>
+  </div>
+  <script>
+    async function submit() {
+      const pass = document.getElementById("pass").value;
+      const res = await fetch("/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ passphrase: pass })
+      });
+      if (res.ok) {
+        window.location.href = "/";
+      } else {
+        document.getElementById("err").style.display = "block";
+        document.getElementById("pass").value = "";
+        document.getElementById("pass").focus();
+      }
+    }
+  </script>
+</body>
+</html>`);
+});
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: "Too many attempts, try again later" }
+});
+
+/* LOGIN POST */
+app.post("/login", loginLimiter, (req, res) => {
+  if (!config.auth.passphrase) return res.redirect("/");
+
+  const { passphrase } = req.body;
+  if (passphrase === config.auth.passphrase) {
+    res.cookie(COOKIE_NAME, passphrase, {
+      maxAge: COOKIE_MAX_AGE,
+      httpOnly: true,
+      sameSite: "strict"
+    });
+    return res.json({ ok: true });
+  }
+
+  res.status(401).json({ error: "Incorrect passphrase" });
+});
+
+/* LOGOUT */
+app.post("/logout", (req, res) => {
+  res.clearCookie(COOKIE_NAME);
+  res.redirect("/login");
+});
+
 
 /* FILE UPLOAD */
 app.post("/upload", (req, res) => {
@@ -288,7 +437,10 @@ app.post("/channels/:name/pin", (req, res) => {
 
 /*  */
 app.get("/info", (req, res) => {
-  res.json({ url: `http://${localIP}:${PORT}`, hostname: os.hostname() });
+  res.json({
+    url: `http://${localIP}:${PORT}`,
+    hasAuth: !!config.auth.passphrase
+  });
 });
 
 /* ============================

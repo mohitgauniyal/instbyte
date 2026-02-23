@@ -676,6 +676,7 @@
     <div class="header-right">
       <span id="who"></span>
       <button onclick="changeName()" class="link-btn">change</button>
+      <button id="logoutBtn" onclick="logout()" class="link-btn">logout</button>
     </div>
   </header>
 
@@ -1024,11 +1025,13 @@
     async function initName() {
       if (!uploader || uploader === "null" || uploader.trim() === "") {
         let suggested = "USER-" + Math.floor(Math.random() * 1000);
-        try {
-          const res = await fetch("/info");
-          const info = await res.json();
-          if (info.hostname) suggested = info.hostname;
-        } catch (e) { }
+        const ua = navigator.userAgent;
+        if (/android/i.test(ua)) suggested = "Android-" + Math.floor(Math.random() * 1000);
+        else if (/iphone|ipad/i.test(ua)) suggested = "iPhone-" + Math.floor(Math.random() * 1000);
+        else if (/mac/i.test(ua)) suggested = "Mac-" + Math.floor(Math.random() * 1000);
+        else if (/windows/i.test(ua)) suggested = "Windows-" + Math.floor(Math.random() * 1000);
+        else if (/linux/i.test(ua)) suggested = "Linux-" + Math.floor(Math.random() * 1000);
+        else suggested = "User-" + Math.floor(Math.random() * 1000);
         uploader = prompt("Your name?", suggested) || suggested;
         localStorage.setItem("name", uploader);
       }
@@ -1298,6 +1301,12 @@
     async function pin(id) {
       await fetch("/pin/" + id, { method: "POST" });
       load();
+    }
+
+
+    async function logout() {
+      await fetch("/logout", { method: "POST" });
+      window.location.href = "/login";
     }
 
     socket.on("new-item", item => {
@@ -1604,6 +1613,11 @@
 
     (async function init() {
       await initName();
+      const infoRes = await fetch("/info");
+      const info = await infoRes.json();
+      if (!info.hasAuth) {
+        document.getElementById("logoutBtn").style.display = "none";
+      }
       await loadChannels();
       load();
     })();
