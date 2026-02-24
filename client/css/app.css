@@ -34,11 +34,20 @@ header {
     border-radius: 12px;
     padding: 6px;
     margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    position: relative;
 }
 
 .channels {
+    flex: 1;
     display: flex;
     gap: 6px;
+}
+
+.channels::-webkit-scrollbar {
+    display: none;
 }
 
 .channels button {
@@ -131,13 +140,14 @@ button {
 }
 
 .icon-btn {
-    background: #f3f4f6;
+    background: #f9fafb;
     border: 1px solid #e5e7eb;
     border-radius: 6px;
     padding: 6px 8px;
     cursor: pointer;
     font-size: 14px;
     line-height: 1;
+    color: #6b7280;
 }
 
 .icon-btn:hover {
@@ -243,6 +253,10 @@ button {
     padding: 8px 16px;
     border-radius: 10px;
     cursor: pointer;
+}
+
+.add-channel-mobile {
+    display: none;
 }
 
 .add-channel:hover {
@@ -652,4 +666,130 @@ button {
     display: flex;
     justify-content: space-between;
     align-items: center;
+}
+
+@media (max-width: 640px) {
+    .app-header {
+        flex-wrap: wrap;
+        padding: 8px 12px;
+        gap: 6px;
+    }
+
+    .header-left {
+        flex: 1;
+    }
+
+    .header-center {
+        order: 3;
+        width: 100%;
+        flex: none;
+    }
+
+    .header-right {
+        font-size: 12px;
+        gap: 6px;
+        flex-shrink: 0;
+    }
+
+    .search-wrapper {
+        max-width: 100%;
+        width: 100%;
+    }
+
+    .search-wrapper input {
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .drop {
+        display: none;
+    }
+
+    .channel-bar {
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        gap: 0;
+        padding: 6px;
+    }
+
+    .channel-bar::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 80px;
+        height: 100%;
+        background: linear-gradient(to right, transparent, #e5e7eb);
+        border-radius: 0 12px 12px 0;
+        pointer-events: none;
+        z-index: 1;
+    }
+
+    .channels {
+        flex: 1;
+        min-width: 0;
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        padding-right: 40px;
+    }
+
+    .channels::-webkit-scrollbar {
+        display: none;
+    }
+
+    .add-channel {
+        display: none;
+    }
+
+    .add-channel-mobile {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        background: transparent;
+        color: #6b7280;
+        font-weight: 600;
+        border: none;
+        border-left: 1px solid #d1d5db;
+        padding: 4px 12px;
+        font-size: 16px;
+        cursor: pointer;
+        position: static;
+        width: auto;
+        height: auto;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .add-channel-mobile:hover {
+        color: #111827;
+        background: #d1d5db;
+    }
+
+    .composer {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .composer input {
+        width: 100%;
+        flex: none;
+        box-sizing: border-box;
+    }
+
+    .composer button {
+        flex: 1;
+    }
+
+    .qr-widget {
+        bottom: 80px;
+    }
+
+    .qr-toggle {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
 }

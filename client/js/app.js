@@ -733,6 +733,41 @@ document.addEventListener("dragleave", e => {
     }
 });
 
+document.getElementById("addChannelBtn").onclick = async () => {
+    if (channels.length >= 10) { alert("Maximum 10 channels allowed"); return; }
+    const name = prompt("Channel name?");
+    if (!name) return;
+
+    const res = await fetch("/channels", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name })
+    });
+
+    if (!res.ok) { const err = await res.json(); alert(err.error); return; }
+    await loadChannels();
+};
+
+function addChannelHandler() {
+    return async () => {
+        if (channels.length >= 10) { alert("Maximum 10 channels allowed"); return; }
+        const name = prompt("Channel name?");
+        if (!name) return;
+
+        const res = await fetch("/channels", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name })
+        });
+
+        if (!res.ok) { const err = await res.json(); alert(err.error); return; }
+        await loadChannels();
+    };
+}
+
+document.getElementById("addChannelBtn").onclick = addChannelHandler();
+document.getElementById("addChannelBtnDesktop").onclick = addChannelHandler();
+
 async function loadChannels() {
     const res = await fetch("/channels");
     const data = await res.json();
@@ -741,6 +776,7 @@ async function loadChannels() {
     renderChannels();
     highlight();
 }
+
 
 function renderChannels() {
     const container = document.getElementById("channels");
@@ -783,25 +819,6 @@ function renderChannels() {
         container.appendChild(btn);
     });
 
-    const addBtn = document.createElement("button");
-    addBtn.innerText = "+";
-    addBtn.className = "add-channel";
-    addBtn.onclick = async () => {
-        if (channels.length >= 10) { alert("Maximum 10 channels allowed"); return; }
-        const name = prompt("Channel name?");
-        if (!name) return;
-
-        const res = await fetch("/channels", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name })
-        });
-
-        if (!res.ok) { const err = await res.json(); alert(err.error); return; }
-        await loadChannels();
-    };
-
-    container.appendChild(addBtn);
 }
 
 function showChannelMenu(e, ch) {

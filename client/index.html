@@ -34,7 +34,10 @@
   <div class="container">
     <div class="channel-bar">
       <div class="channels" id="channels"></div>
+      <button class="add-channel" id="addChannelBtnDesktop">+</button>
+      <button class="add-channel-mobile" id="addChannelBtn">+</button>
     </div>
+
     <div class="composer">
       <input id="msg" type="text" placeholder="Type message or paste link" onkeydown="handleEnter(event)" />
       <button onclick="sendText()">Send</button>
