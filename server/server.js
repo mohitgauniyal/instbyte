@@ -17,6 +17,11 @@ const db = require("./db");
 
 const config = require("./config");
 
+const UPLOADS_DIR = process.env.INSTBYTE_UPLOADS
+  || path.join(__dirname, "../uploads");
+
+const CLIENT_DIR = path.join(__dirname, "../client");
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
@@ -24,12 +29,12 @@ const io = new Server(server, { cors: { origin: "*" } });
 app.use(express.json());
 app.use(cookieParser());
 app.use(requireAuth);
-app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
-app.use(express.static(path.join(__dirname, "../client")));
+app.use("/uploads", express.static(UPLOADS_DIR));
+app.use(express.static(CLIENT_DIR));
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, "../uploads"));
+    cb(null, UPLOADS_DIR);
   },
   filename: (req, file, cb) => {
     const unique = Date.now() + "-" + file.originalname;
@@ -328,7 +333,7 @@ app.delete("/item/:id", (req, res) => {
     if (!item) return res.sendStatus(404);
 
     if (item.filename) {
-      const filePath = path.join(__dirname, "../uploads", item.filename);
+      const filePath = path.join(UPLOADS_DIR, item.filename);
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     }
 

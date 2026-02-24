@@ -14,7 +14,9 @@ setInterval(() => {
     (err, rows) => {
       rows.forEach((item) => {
         if (item.filename) {
-          const filePath = path.join(__dirname, "../uploads", item.filename);
+          const uploadsDir = process.env.INSTBYTE_UPLOADS
+            || path.join(__dirname, "../uploads");
+          const filePath = path.join(uploadsDir, item.filename);
           if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
         }
 

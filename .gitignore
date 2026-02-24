@@ -1,4 +1,6 @@
 node_modules
 uploads
+db.sqlite
+*.sqlite
 server/db.sqlite
 .env
