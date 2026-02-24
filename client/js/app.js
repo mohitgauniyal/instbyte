@@ -340,6 +340,11 @@ function render(data) {
     const el = document.getElementById("items");
     el.innerHTML = "";
 
+    if (!data.length) {
+        el.innerHTML = `<div class="empty-state">Nothing here yet — paste, type, or drop a file to share</div>`;
+        return;
+    }
+
     data.forEach(i => {
         const div = document.createElement("div");
         div.className = "item";

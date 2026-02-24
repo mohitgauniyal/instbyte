@@ -100,6 +100,12 @@ button {
     cursor: pointer;
 }
 
+input[type=text]:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
 .drop {
     border: 2px dashed #ccc;
     padding: 18px;
@@ -660,12 +666,24 @@ button {
 .item {
     flex-direction: column;
     align-items: stretch;
+    transition: box-shadow 0.15s ease;
 }
 
 .item-top {
     display: flex;
     justify-content: space-between;
     align-items: center;
+}
+
+.item:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.empty-state {
+    text-align: center;
+    color: #9ca3af;
+    font-size: 14px;
+    padding: 60px 20px;
 }
 
 @media (max-width: 640px) {
