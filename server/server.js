@@ -5,6 +5,9 @@ const net = require("net");
 const cookieParser = require("cookie-parser");
 const rateLimit = require("express-rate-limit");
 
+let sharp = null;
+try { sharp = require("sharp"); } catch (e) { }
+
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -40,6 +43,72 @@ const upload = multer({
 });
 
 
+function hexToHsl(hex) {
+  let r = parseInt(hex.slice(1, 3), 16) / 255;
+  let g = parseInt(hex.slice(3, 5), 16) / 255;
+  let b = parseInt(hex.slice(5, 7), 16) / 255;
+
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h, s, l = (max + min) / 2;
+
+  if (max === min) {
+    h = s = 0;
+  } else {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+  }
+  return [Math.round(h * 360), Math.round(s * 100), Math.round(l * 100)];
+}
+
+function hslToHex(h, s, l) {
+  s /= 100; l /= 100;
+  const k = n => (n + h / 30) % 12;
+  const a = s * Math.min(l, 1 - l);
+  const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  return "#" + [f(0), f(8), f(4)]
+    .map(x => Math.round(x * 255).toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function getLuminance(hex) {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const toLinear = c => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+}
+
+function buildPalette(hex) {
+  // Fallback if hex is invalid
+  if (!hex || !/^#[0-9a-f]{6}$/i.test(hex)) hex = "#111827";
+
+  const [h, s, l] = hexToHsl(hex);
+
+  // Derive secondary as complementary (180° opposite on color wheel)
+  const secondaryHex = hslToHex((h + 180) % 360, Math.min(s, 60), Math.max(l, 35));
+
+  // Text on primary — white or dark based on contrast
+  const onPrimary = getLuminance(hex) > 0.179 ? "#111827" : "#ffffff";
+  const onSecondary = getLuminance(secondaryHex) > 0.179 ? "#111827" : "#ffffff";
+
+  return {
+    primary: hex,
+    primaryHover: hslToHex(h, s, Math.max(l - 10, 10)),
+    primaryLight: hslToHex(h, Math.min(s, 80), Math.min(l + 40, 96)),
+    primaryDark: hslToHex(h, s, Math.max(l - 20, 5)),
+    onPrimary,
+    secondary: secondaryHex,
+    secondaryHover: hslToHex((h + 180) % 360, Math.min(s, 60), Math.max(l - 10, 10)),
+    secondaryLight: hslToHex((h + 180) % 360, Math.min(s, 60), Math.min(l + 40, 96)),
+    onSecondary,
+  };
+}
+
 const COOKIE_NAME = "instbyte_auth";
 const COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -69,10 +138,16 @@ app.get("/login", (req, res) => {
   if (!config.auth.passphrase) return res.redirect("/");
   if (req.cookies[COOKIE_NAME] === config.auth.passphrase) return res.redirect("/");
 
+  const loginPalette = buildPalette(config.branding.primaryColor);
+  const loginBrandingStyle = `
+    button { background: ${loginPalette.primary}; color: ${loginPalette.onPrimary}; }
+    button:hover { background: ${loginPalette.primaryHover}; }
+`;
+
   res.send(`<!DOCTYPE html>
 <html>
 <head>
-  <title>Instbyte — Login</title>
+  <title>${config.branding.appName || "Instbyte"} — Login</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -122,11 +197,14 @@ app.get("/login", (req, res) => {
       margin-top: 10px;
       display: none;
     }
+    
+    ${loginBrandingStyle}
+
   </style>
 </head>
 <body>
   <div class="box">
-    <div class="logo">Instbyte</div>
+    <div class="logo">${config.branding.appName || "Instbyte"}</div>
     <div class="sub">Enter passphrase to continue</div>
     <input type="password" id="pass" placeholder="Passphrase" autofocus
       onkeydown="if(event.key==='Enter') submit()">
@@ -441,6 +519,66 @@ app.get("/info", (req, res) => {
     url: `http://${localIP}:${PORT}`,
     hasAuth: !!config.auth.passphrase
   });
+});
+
+
+/* BRAND */
+app.get("/branding", (req, res) => {
+  const b = config.branding;
+  const palette = buildPalette(b.primaryColor);
+
+  res.json({
+    appName: b.appName || "Instbyte",
+    hasLogo: !!b.logoPath,
+    palette
+  });
+});
+
+
+/* FAVICON */
+app.get("/favicon-dynamic.png", async (req, res) => {
+  const b = config.branding;
+
+  // User provided their own favicon — serve it directly
+  if (b.faviconPath) {
+    const fp = path.resolve(process.cwd(), b.faviconPath);
+    if (fs.existsSync(fp)) return res.sendFile(fp);
+  }
+
+  // Try to generate favicon from logo using sharp
+  if (b.logoPath && sharp) {
+    const lp = path.resolve(process.cwd(), b.logoPath);
+    if (fs.existsSync(lp)) {
+      try {
+        const buf = await sharp(lp).resize(32, 32).png().toBuffer();
+        res.set("Content-Type", "image/png");
+        return res.send(buf);
+      } catch (e) { }
+    }
+  }
+
+  // Fall back to default favicon
+  const defaultFavicon = path.join(__dirname, "../client/assets/favicon.png");
+  if (fs.existsSync(defaultFavicon)) return res.sendFile(defaultFavicon);
+
+  res.sendStatus(404);
+});
+
+
+/* LOGO */
+app.get("/logo-dynamic.png", (req, res) => {
+  const b = config.branding;
+
+  if (b.logoPath) {
+    const lp = path.resolve(process.cwd(), b.logoPath);
+    if (fs.existsSync(lp)) return res.sendFile(lp);
+  }
+
+  // Fall back to default logo
+  const defaultLogo = path.join(__dirname, "../client/assets/logo.png");
+  if (fs.existsSync(defaultLogo)) return res.sendFile(defaultLogo);
+
+  res.sendStatus(404);
 });
 
 /* ============================

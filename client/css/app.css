@@ -1,3 +1,15 @@
+:root {
+    --color-primary: #111827;
+    --color-primary-hover: #1f2937;
+    --color-primary-light: #f3f4f6;
+    --color-primary-dark: #030712;
+    --color-on-primary: #ffffff;
+    --color-secondary: #6b7280;
+    --color-secondary-hover: #4b5563;
+    --color-secondary-light: #f9fafb;
+    --color-on-secondary: #ffffff;
+}
+
 body {
     font-family: system-ui;
     background: #f3f4f6;
@@ -73,8 +85,8 @@ input[type=text] {
 button {
     padding: 10px 14px;
     border: none;
-    background: #111827;
-    color: #fff;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
     border-radius: 6px;
     cursor: pointer;
 }

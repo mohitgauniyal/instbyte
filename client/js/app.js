@@ -1,5 +1,36 @@
 const socket = io();
 
+async function applyBranding() {
+    try {
+        const res = await fetch("/branding");
+        const b = await res.json();
+
+        // Update page title and app name
+        document.title = b.appName;
+        const nameEl = document.getElementById("appName");
+        if (nameEl) nameEl.innerText = b.appName;
+
+        // Update logo src to dynamic route
+        const logoEl = document.getElementById("appLogo");
+        if (logoEl) logoEl.src = "/logo-dynamic.png";
+
+        // Inject CSS variables
+        const p = b.palette;
+        const root = document.documentElement;
+        root.style.setProperty("--color-primary", p.primary);
+        root.style.setProperty("--color-primary-hover", p.primaryHover);
+        root.style.setProperty("--color-primary-light", p.primaryLight);
+        root.style.setProperty("--color-primary-dark", p.primaryDark);
+        root.style.setProperty("--color-on-primary", p.onPrimary);
+        root.style.setProperty("--color-secondary", p.secondary);
+        root.style.setProperty("--color-secondary-hover", p.secondaryHover);
+        root.style.setProperty("--color-secondary-light", p.secondaryLight);
+        root.style.setProperty("--color-on-secondary", p.onSecondary);
+
+    } catch (e) {
+        // Branding failed — default styles remain, no crash
+    }
+}
 function formatSize(bytes) {
     if (!bytes) return "";
     if (bytes >= 1024 ** 3) return (bytes / 1024 ** 3).toFixed(1) + " GB";
@@ -858,6 +889,7 @@ document.addEventListener("drop", async e => {
 });
 
 (async function init() {
+    await applyBranding();
     await initName();
     const infoRes = await fetch("/info");
     const info = await infoRes.json();
