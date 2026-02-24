@@ -65,6 +65,18 @@ Automatically switches to the next available port if `3000` is already in use.
 - 7-day session cookie — login once, stay in
 - All behaviour configurable without touching code
 
+### Make It Yours
+Instbyte can be fully white-labelled to match your team or brand — no code changes required.
+
+- Custom app name across the entire interface and browser tab
+- Your own logo served automatically
+- Favicon auto-generated from your logo, or provide your own
+- One primary color transforms the entire UI — buttons, active states, accents
+- Secondary color auto-derived as a complementary match
+- Login page inherits your branding too
+
+The difference between *a tool you use* and *a tool you own.*
+
 ### Improved Upload Validation
 - File size limits enforced
 - Clear visual size indicators (100MB / 500MB / 1GB thresholds)
@@ -135,8 +147,39 @@ behaviour.
 | `auth.passphrase` | `""` | Shared password for access. Empty = no auth. |
 | `storage.maxFileSize` | `"2GB"` | Max upload size. Accepts `KB`, `MB`, `GB`. |
 | `storage.retention` | `"24h"` | How long before items are auto-deleted. Accepts `h`, `d`. |
+| `branding` | — | White-label the app. See [Branding](#branding) section. |
 
 Only include the keys you want to override. Missing keys fall back to defaults.
+
+---
+
+## Branding
+
+Instbyte can be white-labelled to look and feel like your own internal tool.
+Add a `branding` block to your `instbyte.config.json`:
+```json
+{
+  "branding": {
+    "appName": "Team Hub",
+    "logoPath": "./assets/my-logo.png",
+    "faviconPath": "./assets/my-favicon.png",
+    "primaryColor": "#7c3aed"
+  }
+}
+```
+
+| Key | Default | Description |
+|---|---|---|
+| `branding.appName` | `"Instbyte"` | App name shown in the header and browser tab |
+| `branding.logoPath` | — | Path to your logo file (PNG, JPG, WebP) relative to where you run the server |
+| `branding.faviconPath` | — | Path to a custom favicon. If omitted, auto-generated from your logo |
+| `branding.primaryColor` | `"#111827"` | Primary brand color in hex. All UI colors are derived from this automatically |
+
+**Notes:**
+- `faviconPath` is optional — if you provide a logo, a favicon is generated from it automatically via `sharp`
+- Secondary and hover colors are derived automatically from your primary color — no manual tuning needed
+- If `sharp` is not installed, favicon generation is skipped gracefully and the default favicon is used instead
+
 
 ---
 
