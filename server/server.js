@@ -615,14 +615,26 @@ io.on("connection", (socket) => {
 
 function getLocalIP() {
   const nets = os.networkInterfaces();
+  const candidates = [];
+
   for (const name of Object.keys(nets)) {
     for (const net of nets[name]) {
-      if (net.family === "IPv4" && !net.internal) {
-        return net.address;
-      }
+      if (net.family !== "IPv4" || net.internal) continue;
+
+      const n = name.toLowerCase();
+      if (/loopback|vmware|virtualbox|vethernet|wsl|hyper|utun|tun|tap|docker|br-|vbox/.test(n)) continue;
+
+      candidates.push({ name, address: net.address });
     }
   }
-  return "localhost";
+
+  const preferred =
+    candidates.find(c => c.address.startsWith("192.168.")) ||
+    candidates.find(c => c.address.startsWith("10.")) ||
+    candidates.find(c => c.address.startsWith("172.16.")) ||
+    candidates[0];
+
+  return preferred ? preferred.address : "localhost";
 }
 
 function findFreePort(start) {
