@@ -390,10 +390,10 @@ function render(data) {
   <div class="meta">${i.uploader}</div>
 </div>
     <div class="item-actions">
-      ${getPreviewType(i.filename) !== "none"
+     ${getPreviewType(i.filename) !== "none" && getPreviewType(i.filename) !== "image"
                 ? `<button class="icon-btn" id="prevbtn-${i.id}"
-             onclick="togglePreview(${i.id}, '${i.filename}')"
-             title="Preview">👁</button>`
+       onclick="togglePreview(${i.id}, '${i.filename}')"
+       title="Preview">👁</button>`
                 : ""}
       <button class="icon-btn" onclick="pin(${i.id})" title="${i.pinned ? 'Unpin' : 'Pin'}">
         ${i.pinned ? "📍" : "📌"}
@@ -486,10 +486,10 @@ function renderGrouped(data) {
   <div class="meta">${i.uploader}</div>
 </div>
     <div class="item-actions">
-      ${getPreviewType(i.filename) !== "none"
+      ${getPreviewType(i.filename) !== "none" && getPreviewType(i.filename) !== "image"
                     ? `<button class="icon-btn" id="prevbtn-${i.id}"
-             onclick="togglePreview(${i.id}, '${i.filename}')"
-             title="Preview">👁</button>`
+       onclick="togglePreview(${i.id}, '${i.filename}')"
+       title="Preview">👁</button>`
                     : ""}
       <button class="icon-btn" onclick="pin(${i.id})" title="${i.pinned ? 'Unpin' : 'Pin'}">
         ${i.pinned ? "📍" : "📌"}
