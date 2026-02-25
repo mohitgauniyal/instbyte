@@ -10,7 +10,9 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/instbyte"><img src="https://img.shields.io/npm/v/instbyte" alt="npm version"></a>
-  <a href="https://github.com/mohitgauniyal/instbyte/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/instbyte" alt="license"></a>
+  <a href="https://github.com/mohitgauniyal/instbyte/blob/main/LICENSE">
+  <img src="https://img.shields.io/github/license/mohitgauniyal/instbyte" alt="license">
+</a>
 </p>
 
 ---
