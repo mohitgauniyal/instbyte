@@ -239,6 +239,14 @@ function handleRowClick(el, type, value) {
     }
 }
 
+document.getElementById("items").addEventListener("click", e => {
+    const left = e.target.closest(".left");
+    if (!left) return;
+    const type = left.dataset.type;
+    const value = left.dataset.value;
+    handleRowClick(left, type, value);
+});
+
 let openDropdown = null;
 
 function toggleMoveDropdown(e, id, currentChannel) {
@@ -388,9 +396,10 @@ function render(data) {
   <div class="item-top">
     <div class="left"
      data-tooltip="${i.type === 'file' ? 'Click to download' : 'Click to copy'}"
-     onclick="${i.type === 'file'
-                ? `handleRowClick(this, 'file', '/uploads/${i.filename}')`
-                : `handleRowClick(this, 'text', '${(i.content || '').replace(/'/g, "\\'")}')`}">
+     data-type="${i.type === 'file' ? 'file' : 'text'}"
+data-value="${i.type === 'file'
+                ? `/uploads/${i.filename}`
+                : (i.content || '').replace(/"/g, '&quot;')}">
   ${content}
   <div class="meta">${i.uploader}</div>
 </div>
@@ -485,9 +494,10 @@ function renderGrouped(data) {
   <div class="item-top">
     <div class="left"
      data-tooltip="${i.type === 'file' ? 'Click to download' : 'Click to copy'}"
-     onclick="${i.type === 'file'
-                    ? `handleRowClick(this, 'file', '/uploads/${i.filename}')`
-                    : `handleRowClick(this, 'text', '${(i.content || '').replace(/'/g, "\\'")}')`}">
+     data-type="${i.type === 'file' ? 'file' : 'text'}"
+data-value="${i.type === 'file'
+                    ? `/uploads/${i.filename}`
+                    : (i.content || '').replace(/"/g, '&quot;')}">
   ${content}
   <div class="meta">${i.uploader}</div>
 </div>
@@ -749,6 +759,7 @@ document.addEventListener("dragleave", e => {
     }
 });
 
+/*
 document.getElementById("addChannelBtn").onclick = async () => {
     if (channels.length >= 10) { alert("Maximum 10 channels allowed"); return; }
     const name = prompt("Channel name?");
@@ -763,6 +774,7 @@ document.getElementById("addChannelBtn").onclick = async () => {
     if (!res.ok) { const err = await res.json(); alert(err.error); return; }
     await loadChannels();
 };
+*/
 
 function addChannelHandler() {
     return async () => {
