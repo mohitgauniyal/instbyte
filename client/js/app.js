@@ -637,9 +637,14 @@ socket.on("channel-renamed", ({ oldName, newName }) => {
 });
 
 socket.on("channel-pin-update", ({ name, pinned }) => {
-    channels = channels.map(c => c.name === name ? { ...c, pinned } : c);
-    renderChannels();
-    highlight();
+    if (pinned) {
+        channels = channels.map(c => c.name === name ? { ...c, pinned } : c);
+        channels.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
+        renderChannels();
+        highlight();
+    } else {
+        loadChannels();
+    }
 });
 
 document.getElementById("search").addEventListener("input", async e => {
