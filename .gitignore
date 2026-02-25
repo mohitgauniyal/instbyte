@@ -1,6 +1,5 @@
 node_modules
 uploads
-assets/
 db.sqlite
 *.sqlite
 server/db.sqlite
