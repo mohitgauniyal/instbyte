@@ -10,3 +10,4 @@ instbyte.config.json
 nodemon.json
 db.sqlite
 server/db.sqlite
+assets/

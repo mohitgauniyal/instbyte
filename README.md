@@ -5,10 +5,6 @@
 <h1 align="center">Instbyte</h1>
 
 <p align="center">
-  A self-hosted LAN sharing utility you can make your own — files, links, and snippets across devices instantly, no cloud required.
-</p>
-
-<p align="center">
   <a href="https://www.npmjs.com/package/instbyte"><img src="https://img.shields.io/npm/v/instbyte" alt="npm version"></a>
   <a href="https://github.com/mohitgauniyal/instbyte/blob/main/LICENSE">
   <img src="https://img.shields.io/github/license/mohitgauniyal/instbyte" alt="license">
@@ -16,6 +12,14 @@
 </p>
 
 ---
+
+<p align="center">
+  <img src="assets/instbyte-ad.png" width="900">
+</p>
+
+```bash
+npx instbyte
+```
 
 **Instbyte** is a high-speed, real-time, short-lived LAN sharing utility built for teams and developers who need to move snippets, links, files, and structured notes across devices instantly — without cloud accounts, logins, or external services.
 
