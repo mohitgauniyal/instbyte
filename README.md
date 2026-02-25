@@ -43,6 +43,7 @@ Or install globally and run from anywhere:
 npm install -g instbyte
 instbyte
 ```
+Data and config live in the directory you run the command from. To keep a permanent instance, always run from the same folder or use a process manager like pm2.
 
 That's it. Open the displayed URL in any browser on the same network.
 
