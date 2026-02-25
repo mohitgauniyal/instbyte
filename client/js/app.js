@@ -408,7 +408,8 @@ function render(data) {
           onclick="toggleMoveDropdown(event, ${i.id}, '${i.channel}')">⇄</button>
         <div class="move-dropdown"></div>
       </div>
-      <button class="icon-btn delete" onclick="del(${i.id})" title="Delete">🗑</button>
+      <button class="icon-btn delete" onclick="del(${i.id}, ${i.pinned})" title="Delete">🗑</button>
+
     </div>
   </div>
   <div class="preview-panel" id="preview-${i.id}"></div>
@@ -504,7 +505,8 @@ function renderGrouped(data) {
           onclick="toggleMoveDropdown(event, ${i.id}, '${i.channel}')">⇄</button>
         <div class="move-dropdown"></div>
       </div>
-      <button class="icon-btn delete" onclick="del(${i.id})" title="Delete">🗑</button>
+      <button class="icon-btn delete" onclick="del(${i.id}, ${i.pinned})" title="Delete">🗑</button>
+
     </div>
   </div>
   <div class="preview-panel" id="preview-${i.id}"></div>
@@ -576,7 +578,11 @@ fileInput.onchange = () => {
     if (file) uploadFile(file);
 };
 
-async function del(id) {
+async function del(id, pinned) {
+    if (pinned) {
+        const confirmed = confirm("This item is pinned. Are you sure you want to delete it?");
+        if (!confirmed) return;
+    }
     await fetch("/item/" + id, { method: "DELETE" });
 }
 
