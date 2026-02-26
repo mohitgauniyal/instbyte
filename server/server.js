@@ -126,7 +126,7 @@ function requireAuth(req, res, next) {
   if (!config.auth.passphrase) return next(); // no passphrase set, skip
 
   // Allow the login route itself through
-  if (req.path === "/login" || req.path === "/info") return next();
+  if (req.path === "/login" || req.path === "/info" || req.path === "/health") return next();
 
 
   // Check cookie
@@ -544,6 +544,15 @@ app.get("/branding", (req, res) => {
   });
 });
 
+/* HEALTH MONITOR */
+app.get("/health", (req, res) => {
+  res.json({
+    status: "ok",
+    uptime: Math.floor(process.uptime()),
+    version: require("../package.json").version
+  });
+});
+
 
 /* FAVICON */
 app.get("/favicon-dynamic.png", async (req, res) => {
@@ -573,6 +582,7 @@ app.get("/favicon-dynamic.png", async (req, res) => {
 
   res.sendStatus(404);
 });
+
 
 
 /* LOGO */
