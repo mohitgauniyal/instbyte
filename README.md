@@ -167,6 +167,20 @@ The difference between *a tool you use* and *a tool you own.*
 
 **QR join** — built-in QR code so phones can join instantly without typing the URL.
 
+**Dark mode** — follows system preference automatically. Override with the toggle in the header.
+
+---
+
+## Keyboard Shortcuts
+
+| Key | Action |
+|---|---|
+| `/` | Focus search |
+| `Escape` | Close previews, menus, or blur input |
+| `Ctrl/Cmd + Enter` | Send message |
+| `Ctrl/Cmd + K` | Jump to message input |
+| `Tab` | Cycle channels |
+
 ---
 
 ## Manual / Self-hosted from Source
