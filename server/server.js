@@ -4,6 +4,7 @@ const os = require("os");
 const net = require("net");
 const cookieParser = require("cookie-parser");
 const rateLimit = require("express-rate-limit");
+const helmet = require("helmet");
 
 let sharp = null;
 try { sharp = require("sharp"); } catch (e) { }
@@ -25,6 +26,10 @@ const CLIENT_DIR = path.join(__dirname, "../client");
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
+
+app.use(helmet({
+  contentSecurityPolicy: false  // disable CSP for now — it would block CDN scripts
+}));
 
 app.use(express.json());
 app.use(cookieParser());
