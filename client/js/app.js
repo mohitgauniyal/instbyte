@@ -1,5 +1,60 @@
 const socket = io();
 
+// ========================
+// THEME MANAGEMENT (FIXED)
+// ========================
+const THEME_KEY = "instbyte_theme";
+const mq = window.matchMedia("(prefers-color-scheme: dark)");
+
+function getStoredTheme() {
+    return localStorage.getItem(THEME_KEY) || "auto";
+}
+
+function applyTheme(theme) {
+    const root = document.documentElement;
+    const btn = document.getElementById("themeToggle");
+
+    // Apply attribute EXACTLY
+    if (theme === "dark") {
+        root.setAttribute("data-theme", "dark");
+    } else if (theme === "light") {
+        root.setAttribute("data-theme", "light");
+    } else {
+        root.removeAttribute("data-theme"); // auto
+    }
+
+    if (!btn) return;
+
+    // Update icon based on CURRENT stored state
+    if (theme === "dark") btn.textContent = "☀️";
+    else if (theme === "light") btn.textContent = "🌙";
+    else {
+        btn.textContent = mq.matches ? "☀️" : "🌙";
+    }
+}
+
+function cycleTheme() {
+    const current = getStoredTheme();
+
+    let next;
+    if (current === "dark") next = "light";
+    else if (current === "light") next = "dark";
+    else next = "dark"; // auto → dark first
+
+    localStorage.setItem(THEME_KEY, next);
+    applyTheme(next);
+}
+
+// INITIAL LOAD
+applyTheme(getStoredTheme());
+
+// OS change listener (only when auto)
+mq.addEventListener("change", () => {
+    if (getStoredTheme() === "auto") {
+        applyTheme("auto");
+    }
+});
+
 async function applyBranding() {
     try {
         const res = await fetch("/branding");
