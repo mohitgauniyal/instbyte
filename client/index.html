@@ -72,6 +72,12 @@
 
   <div class="context-menu" id="channelMenu"></div>
 
+  <div id="undoToast" class="undo-toast">
+    <span id="undoMsg">Item deleted</span>
+    <button id="undoBtn" onclick="undoDelete()">Undo</button>
+    <div id="undoProgress" class="undo-progress"></div>
+  </div>
+
   <script src="/socket.io/socket.io.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>

@@ -304,6 +304,10 @@ document.getElementById("items").addEventListener("click", e => {
 
 let openDropdown = null;
 
+let pendingDeleteId = null;
+let pendingDeleteTimer = null;
+let pendingDeleteEl = null;
+
 function toggleMoveDropdown(e, id, currentChannel) {
     e.stopPropagation();
 
@@ -387,6 +391,15 @@ function highlight() {
 }
 
 function setChannel(c) {
+    // flush any pending delete before switching
+    if (pendingDeleteId !== null) {
+        clearTimeout(pendingDeleteTimer);
+        fetch("/item/" + pendingDeleteId, { method: "DELETE" });
+        pendingDeleteId = null;
+        pendingDeleteTimer = null;
+        pendingDeleteEl = null;
+        hideUndoToast();
+    }
     channel = c;
     renderChannels();
     highlight();
@@ -411,6 +424,7 @@ function render(data) {
     data.forEach(i => {
         const div = document.createElement("div");
         div.className = "item";
+        div.dataset.itemId = i.id;
 
         let content = "";
 
@@ -511,6 +525,7 @@ function renderGrouped(data) {
         grouped[ch].forEach(i => {
             const div = document.createElement("div");
             div.className = "item";
+            div.dataset.itemId = i.id;
 
             let content = "";
 
@@ -644,11 +659,65 @@ fileInput.onchange = () => {
 };
 
 async function del(id, pinned) {
+    // pinned items keep confirm dialog
     if (pinned) {
         const confirmed = confirm("This item is pinned. Are you sure you want to delete it?");
         if (!confirmed) return;
+        await fetch("/item/" + id, { method: "DELETE" });
+        return;
     }
-    await fetch("/item/" + id, { method: "DELETE" });
+
+    // if another delete is pending, execute it immediately (don't await — fire and forget)
+    if (pendingDeleteId !== null) {
+        clearTimeout(pendingDeleteTimer);
+        fetch("/item/" + pendingDeleteId, { method: "DELETE" });
+        pendingDeleteId = null;
+        pendingDeleteTimer = null;
+    }
+
+    // optimistically remove from UI
+    const el = document.querySelector(`[data-item-id="${id}"]`);
+    if (el) {
+        pendingDeleteEl = el.outerHTML;
+        el.remove();
+    }
+
+    pendingDeleteId = id;
+    showUndoToast();
+
+    pendingDeleteTimer = setTimeout(async () => {
+        await fetch("/item/" + pendingDeleteId, { method: "DELETE" });
+        pendingDeleteId = null;
+        pendingDeleteTimer = null;
+        pendingDeleteEl = null;
+        hideUndoToast();
+    }, 5000);
+}
+
+function undoDelete() {
+    if (pendingDeleteId === null) return;
+    clearTimeout(pendingDeleteTimer);
+    pendingDeleteId = null;
+    pendingDeleteTimer = null;
+    pendingDeleteEl = null;
+    hideUndoToast();
+    load(); // reload to restore item
+}
+
+function showUndoToast() {
+    const toast = document.getElementById("undoToast");
+    const progress = document.getElementById("undoProgress");
+    progress.classList.remove("running");
+    void progress.offsetWidth; // force reflow to restart animation
+    progress.classList.add("running");
+    toast.classList.add("show");
+}
+
+function hideUndoToast() {
+    const toast = document.getElementById("undoToast");
+    const progress = document.getElementById("undoProgress");
+    toast.classList.remove("show");
+    progress.classList.remove("running");
 }
 
 async function pin(id) {
@@ -667,7 +736,16 @@ socket.on("new-item", item => {
 });
 
 socket.on("delete-item", id => {
-    load();
+    // don't reload if this item is already removed or pending
+    if (id == pendingDeleteId) return;
+    const el = document.querySelector(`[data-item-id="${id}"]`);
+    if (el) el.remove();
+
+    // show empty state if no items left
+    const items = document.getElementById("items");
+    if (items && !items.querySelector(".item")) {
+        items.innerHTML = `<div class="empty-state">Nothing here yet — paste, type, or drop a file to share</div>`;
+    }
 });
 
 socket.on("item-moved", ({ id, channel: toChannel }) => {
