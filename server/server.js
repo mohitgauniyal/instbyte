@@ -416,19 +416,27 @@ app.post("/channels", (req, res) => {
   const { name } = req.body;
   if (!name) return res.status(400).json({ error: "Name required" });
 
+  const trimmed = name.trim();
+  if (trimmed.length < 1 || trimmed.length > 32) {
+    return res.status(400).json({ error: "Channel name must be 1–32 characters" });
+  }
+  if (!/^[a-zA-Z0-9 _\-]+$/.test(trimmed)) {
+    return res.status(400).json({ error: "Only letters, numbers, spaces, hyphens, and underscores allowed" });
+  }
+
   db.get("SELECT COUNT(*) as count FROM channels", (err, row) => {
 
     if (row.count >= 10) {
       return res.status(400).json({ error: "Max 10 channels allowed" });
     }
 
-    db.run("INSERT INTO channels (name) VALUES (?)", [name], function (err) {
+    db.run("INSERT INTO channels (name) VALUES (?)", [trimmed], function (err) {
 
       if (err) {
         return res.status(400).json({ error: "Channel exists" });
       }
-      io.emit("channel-added", { id: this.lastID, name });
-      res.json({ id: this.lastID, name });
+      io.emit("channel-added", { id: this.lastID, trimmed });
+      res.json({ id: this.lastID, name: trimmed });
 
     });
 
@@ -490,18 +498,25 @@ app.patch("/item/:id/move", (req, res) => {
 app.patch("/channels/:name", (req, res) => {
   const oldName = req.params.name;
   const { name: newName } = req.body;
-
   if (!newName) return res.status(400).json({ error: "Name required" });
+
+  const trimmed = newName.trim();
+  if (trimmed.length < 1 || trimmed.length > 32) {
+    return res.status(400).json({ error: "Channel name must be 1–32 characters" });
+  }
+  if (!/^[a-zA-Z0-9 _\-]+$/.test(trimmed)) {
+    return res.status(400).json({ error: "Only letters, numbers, spaces, hyphens, and underscores allowed" });
+  }
 
   db.get("SELECT * FROM channels WHERE name=?", [oldName], (err, row) => {
     if (!row) return res.status(404).json({ error: "Channel not found" });
 
-    db.run("UPDATE channels SET name=? WHERE name=?", [newName, oldName], (err) => {
+    db.run("UPDATE channels SET name=? WHERE name=?", [trimmed, oldName], (err) => {
       if (err) return res.status(400).json({ error: "Channel name already exists" });
 
-      db.run("UPDATE items SET channel=? WHERE channel=?", [newName, oldName], () => {
-        io.emit("channel-renamed", { oldName, newName });
-        res.json({ oldName, newName });
+      db.run("UPDATE items SET channel=? WHERE channel=?", [trimmed, oldName], () => {
+        io.emit("channel-renamed", { oldName, newName: trimmed });
+        res.json({ oldName, newName: trimmed });
       });
     });
   });
