@@ -654,8 +654,7 @@ document.addEventListener("click", e => {
 const fileInput = document.getElementById("fileInput");
 
 fileInput.onchange = () => {
-    const file = fileInput.files[0];
-    if (file) uploadFile(file);
+    if (fileInput.files.length) uploadFiles(fileInput.files);
 };
 
 async function del(id, pinned) {
@@ -829,47 +828,63 @@ document.addEventListener("paste", async e => {
     });
 });
 
-function uploadFile(file) {
+async function uploadFiles(files) {
+    if (!files || !files.length) return;
+
     const status = document.getElementById("uploadStatus");
     const bar = document.getElementById("uploadBar");
     const text = document.getElementById("uploadText");
 
-    status.style.display = "block";
-    bar.style.width = "0%";
-    text.innerText = "Uploading: " + file.name;
+    const total = files.length;
+    const targetChannel = channel; // capture at start, won't change if user switches
 
-    const form = new FormData();
-    form.append("file", file);
-    form.append("channel", channel);
-    form.append("uploader", uploader);
+    for (let i = 0; i < total; i++) {
+        const file = files[i];
 
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", "/upload", true);
+        status.style.display = "block";
+        bar.style.width = "0%";
+        text.innerText = total > 1
+            ? `Uploading ${i + 1} of ${total} · ${file.name}`
+            : `Uploading: ${file.name}`;
 
-    xhr.upload.onprogress = e => {
-        if (e.lengthComputable) {
-            const percent = Math.round((e.loaded / e.total) * 100);
-            bar.style.width = percent + "%";
-        }
-    };
+        await new Promise((resolve) => {
+            const form = new FormData();
+            form.append("file", file);
+            form.append("channel", targetChannel);
+            form.append("uploader", uploader);
 
-    xhr.onload = () => {
-        status.style.display = "none";
-        if (xhr.status === 413) {
-            alert("File too large — 2GB maximum allowed.");
-            fileInput.value = "";
-            return;
-        }
-        fileInput.value = "";
-        load();
-    };
+            const xhr = new XMLHttpRequest();
+            xhr.open("POST", "/upload", true);
 
-    xhr.onerror = () => {
-        status.style.display = "none";
-        alert("Upload failed");
-    };
+            xhr.upload.onprogress = e => {
+                if (e.lengthComputable) {
+                    bar.style.width = Math.round((e.loaded / e.total) * 100) + "%";
+                }
+            };
 
-    xhr.send(form);
+            xhr.onload = () => {
+                if (xhr.status === 413) {
+                    text.innerText = `⚠ ${file.name} is too large — skipped`;
+                    bar.style.width = "0%";
+                    setTimeout(resolve, 1200);
+                    return;
+                }
+                resolve();
+            };
+
+            xhr.onerror = () => {
+                text.innerText = `⚠ ${file.name} failed — skipped`;
+                bar.style.width = "0%";
+                setTimeout(resolve, 1200);
+            };
+
+            xhr.send(form);
+        });
+    }
+
+    status.style.display = "none";
+    fileInput.value = "";
+    load();
 }
 
 
@@ -1055,15 +1070,9 @@ document.addEventListener("drop", async e => {
     overlay.style.display = "none";
     dragCounter = 0;
 
-    const file = e.dataTransfer.files[0];
-    if (!file) return;
-
-    const form = new FormData();
-    form.append("file", file);
-    form.append("channel", channel);
-    form.append("uploader", uploader);
-
-    uploadFile(file);
+    const files = e.dataTransfer.files;
+    if (!files.length) return;
+    uploadFiles(files);
 });
 
 // ========================
