@@ -599,7 +599,7 @@ async function sendText() {
 }
 
 function handleEnter(e) {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
         e.preventDefault();
         sendText();
     }
@@ -986,6 +986,102 @@ document.addEventListener("drop", async e => {
     form.append("uploader", uploader);
 
     uploadFile(file);
+});
+
+// ========================
+// KEYBOARD SHORTCUTS
+// ========================
+document.addEventListener("keydown", e => {
+    const active = document.activeElement;
+    const isTyping = active && (active.id === "msg" || active.id === "search");
+
+    // Ctrl/Cmd + Enter — send message (only when msg is focused)
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+        if (active && active.id === "msg") {
+            e.preventDefault();
+            e.stopPropagation();
+            sendText();
+        }
+        return;
+    }
+
+    // Ctrl/Cmd + K — focus message input
+    if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        if (!isTyping) {
+            e.preventDefault();
+            document.getElementById("msg").focus();
+        }
+        return;
+    }
+
+    // / — focus search
+    if (e.key === "/" && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        const search = document.getElementById("search");
+        search.focus();
+        search.select();
+        return;
+    }
+
+    // Tab — cycle channels
+    if (e.key === "Tab" && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+        e.preventDefault();
+        if (!channels.length) return;
+        const currentIndex = channels.findIndex(c => c.name === channel);
+        const nextIndex = (currentIndex + 1) % channels.length;
+        setChannel(channels[nextIndex].name);
+        return;
+    }
+
+    // Escape — close state in priority order
+    if (e.key === "Escape") {
+
+        // 1. blur any focused input first
+        if (active && (active.id === "msg" || active.id === "search")) {
+            if (active.id === "search" && active.value) {
+                active.value = "";
+                highlight();
+                load();
+            }
+            active.blur();
+            return;
+        }
+
+        // 2. close open preview
+        if (openPreviewId) {
+            const panel = document.getElementById("preview-" + openPreviewId);
+            const btn = document.getElementById("prevbtn-" + openPreviewId);
+            if (panel) panel.classList.remove("open");
+            if (btn) btn.classList.remove("preview-active");
+            openPreviewId = null;
+            return;
+        }
+
+        // 3. close move dropdown
+        if (openDropdown) {
+            openDropdown.classList.remove("open");
+            openDropdown = null;
+            return;
+        }
+
+        // 4. close context menu
+        const contextMenu = document.getElementById("channelMenu");
+        if (contextMenu.classList.contains("open")) {
+            contextMenu.classList.remove("open");
+            return;
+        }
+
+        // 5. close QR card
+        const qrCard = document.getElementById("qrCard");
+        if (qrCard.classList.contains("open")) {
+            qrCard.classList.remove("open");
+            return;
+        }
+    }
+
+    // All remaining shortcuts — skip if typing
+    if (isTyping) return;
+
 });
 
 (async function init() {
