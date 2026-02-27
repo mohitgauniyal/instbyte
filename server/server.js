@@ -655,6 +655,7 @@ let connectedUsers = 0;
 
 io.on("connection", (socket) => {
   connectedUsers++;
+  io.emit("user-count", connectedUsers);
 
   let username = "Unknown";
 
@@ -666,6 +667,7 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     connectedUsers--;
     console.log(username + " disconnected | total:", connectedUsers);
+    io.emit("user-count", connectedUsers);
   });
 });
 

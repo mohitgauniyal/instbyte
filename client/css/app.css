@@ -246,10 +246,73 @@ input[type=text]:focus {
     color: #6b7280;
     cursor: pointer;
     font-size: 13px;
+    padding: 0;
 }
 
 .link-btn:hover {
     color: #111827;
+}
+
+.username-display {
+    font-size: 13px;
+    color: #374151;
+    cursor: pointer;
+    border-bottom: 1px dashed transparent;
+    transition: border-color 0.15s ease, color 0.15s ease;
+    padding-bottom: 1px;
+}
+
+.username-display:hover {
+    color: #111827;
+    border-bottom-color: #9ca3af;
+}
+
+.logout-btn {
+    background: none;
+    border: 1px solid #e5e7eb;
+    color: #6b7280;
+    cursor: pointer;
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    transition: all 0.15s ease;
+}
+
+.logout-btn:hover {
+    background: #fee2e2;
+    border-color: #fecaca;
+    color: #b91c1c;
+}
+
+.online-count {
+    font-size: 12px;
+    color: #9ca3af;
+}
+
+.theme-toggle {
+    font-size: 15px;
+    padding: 2px 6px;
+    border-radius: 6px;
+    transition: background 0.15s ease;
+}
+
+.theme-toggle:hover {
+    background: #f3f4f6;
+}
+
+.online-count {
+    font-size: 12px;
+    color: #9ca3af;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .online-count {
+        color: #6b7280;
+    }
+}
+
+:root[data-theme="dark"] .online-count {
+    color: #6b7280;
 }
 
 .add-channel {
@@ -1517,4 +1580,15 @@ input[type=text]:focus {
 
 :root[data-theme="dark"] .load-more-btn:hover {
     background: #2d3148;
+}
+
+:root[data-theme="dark"] .logout-btn {
+    border-color: #2d3148;
+    color: #9ca3af;
+}
+
+:root[data-theme="dark"] .logout-btn:hover {
+    background: #2d1515;
+    border-color: #7f1d1d;
+    color: #f87171;
 }

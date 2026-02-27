@@ -25,10 +25,11 @@
       </div>
     </div>
     <div class="header-right">
-      <span id="who"></span>
-      <button onclick="changeName()" class="link-btn">change</button>
-      <button id="themeToggle" onclick="cycleTheme()">🌙</button>
-      <button id="logoutBtn" onclick="logout()" class="link-btn">logout</button>
+      <span id="who" class="username-display" onclick="changeName()" title="Click to change name"></span>
+      <span id="onlineCount" class="online-count"></span>
+      <button id="themeToggle" onclick="cycleTheme()" class="link-btn theme-toggle" title="Toggle theme">🌙</button>
+      <button id="logoutBtn" onclick="logout()" class="logout-btn">logout</button>
+    </div>
     </div>
   </header>
 

@@ -414,7 +414,7 @@ async function initName() {
         uploader = prompt("Your name?", suggested) || suggested;
         localStorage.setItem("name", uploader);
     }
-    document.getElementById("who").innerText = "You: " + uploader;
+    document.getElementById("who").innerText = uploader;
     socket.emit("join", uploader);
 }
 
@@ -748,7 +748,7 @@ function changeName() {
     if (!n) return;
     uploader = n;
     localStorage.setItem("name", n);
-    document.getElementById("who").innerText = "You: " + uploader;
+    document.getElementById("who").innerText = uploader;
 }
 
 let qrLoaded = false;
@@ -887,6 +887,11 @@ socket.on("delete-item", id => {
     if (items && !items.querySelector(".item")) {
         items.innerHTML = `<div class="empty-state">Nothing here yet — paste, type, or drop a file to share</div>`;
     }
+});
+
+socket.on("user-count", count => {
+    const el = document.getElementById("onlineCount");
+    if (el) el.textContent = `● ${count} online`;
 });
 
 socket.on("item-moved", ({ id, channel: toChannel }) => {
