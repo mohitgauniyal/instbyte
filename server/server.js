@@ -366,15 +366,46 @@ app.post("/pin/:id", (req, res) => {
 /* GET ITEMS */
 app.get("/items/:channel", (req, res) => {
   const channel = req.params.channel;
+  const page = parseInt(req.query.page) || 1;
+  const limit = 10;
+  const offset = (page - 1) * limit;
 
-  db.all(
-    `SELECT * FROM items WHERE channel=? ORDER BY pinned DESC, created_at DESC`,
+  db.get(
+    `SELECT COUNT(*) as count FROM items WHERE channel=? AND pinned=0`,
     [channel],
-    (err, rows) => {
-      res.json(rows);
+    (err, row) => {
+      if (err) return res.status(500).json({ error: "DB error" });
+
+      const totalUnpinned = row.count;
+      const hasMore = offset + limit < totalUnpinned;
+
+      db.all(
+        `SELECT * FROM items WHERE channel=? AND pinned=0 
+         ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+        [channel, limit, offset],
+        (err, unpinned) => {
+          if (err) return res.status(500).json({ error: "DB error" });
+
+          if (page === 1) {
+            // only fetch pinned on first page
+            db.all(
+              `SELECT * FROM items WHERE channel=? AND pinned=1 
+               ORDER BY created_at DESC`,
+              [channel],
+              (err, pinned) => {
+                if (err) return res.status(500).json({ error: "DB error" });
+                res.json({ items: [...pinned, ...unpinned], hasMore, page });
+              }
+            );
+          } else {
+            res.json({ items: unpinned, hasMore, page });
+          }
+        }
+      );
     }
   );
 });
+
 
 /* SEARCH */
 app.get("/search/:channel/:q", (req, res) => {

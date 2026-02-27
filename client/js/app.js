@@ -1,5 +1,8 @@
 const socket = io();
 
+let currentPage = 1;
+let hasMoreItems = false;
+
 // ========================
 // THEME MANAGEMENT (FIXED)
 // ========================
@@ -406,10 +409,29 @@ function setChannel(c) {
     load();
 }
 
-async function load() {
-    const res = await fetch("/items/" + channel);
+async function load(resetPage = true) {
+    if (resetPage) currentPage = 1;
+
+    const res = await fetch(`/items/${channel}?page=${currentPage}`);
     const data = await res.json();
-    render(data);
+
+    console.log("load called, page:", currentPage, "data:", data);
+
+    hasMoreItems = data.hasMore;
+
+    if (currentPage === 1) {
+        render(data.items);
+    } else {
+        renderMore(data.items);
+    }
+
+    const wrapper = document.getElementById("loadMoreWrapper");
+    wrapper.style.display = hasMoreItems ? "block" : "none";
+}
+
+async function loadMore() {
+    currentPage++;
+    await load(false);
 }
 
 function render(data) {
@@ -492,6 +514,74 @@ data-value="${i.type === 'file'
   </div>
   <div class="preview-panel" id="preview-${i.id}"></div>
 `;
+        el.appendChild(div);
+    });
+}
+
+function renderMore(data) {
+    const el = document.getElementById("items");
+    data.forEach(i => {
+        const div = document.createElement("div");
+        div.className = "item";
+        div.dataset.itemId = i.id;
+
+        let content = "";
+
+        if (i.type === "file") {
+            const isImg = i.filename.match(/\.(jpg|png|jpeg|gif)$/i);
+            const sizeLabel = formatSize(i.size);
+            const sizeClass = getSizeTag(i.size);
+            const sizeTag = sizeClass
+                ? `<span class="size-tag ${sizeClass}">${sizeLabel}</span>`
+                : sizeLabel
+                    ? `<span style="font-size:11px;color:#9ca3af;margin-left:6px;">${sizeLabel}</span>`
+                    : "";
+
+            if (isImg) {
+                content = `<img src="/uploads/${i.filename}" style="max-width:200px;border-radius:6px"><br>
+                <a href="/uploads/${i.filename}" target="_blank">${i.filename}</a>${sizeTag}`;
+            } else {
+                content = `<a href="/uploads/${i.filename}" target="_blank">${i.filename}</a>${sizeTag}`;
+            }
+        } else {
+            const isLink = i.content && i.content.startsWith("http");
+            if (isLink) {
+                content = `<a href="${i.content}" target="_blank">${i.content}</a>`;
+            } else {
+                content = renderText(i.content);
+            }
+        }
+
+        div.innerHTML = `
+        <div class="item-top">
+            <div class="left"
+             data-tooltip="${i.type === 'file' ? 'Click to download' : 'Click to copy'}"
+             data-type="${i.type === 'file' ? 'file' : 'text'}"
+             data-value="${i.type === 'file'
+                ? `/uploads/${i.filename}`
+                : (i.content || '').replace(/"/g, '&quot;')}">
+                ${content}
+                <div class="meta">${i.uploader}</div>
+            </div>
+            <div class="item-actions">
+                ${getPreviewType(i.filename) !== "none" && getPreviewType(i.filename) !== "image"
+                ? `<button class="icon-btn" id="prevbtn-${i.id}"
+                       onclick="togglePreview(${i.id}, '${i.filename}')"
+                       title="Preview">👁</button>`
+                : ""}
+                <button class="icon-btn" onclick="pin(${i.id})" title="${i.pinned ? 'Unpin' : 'Pin'}">
+                    ${i.pinned ? "📍" : "📌"}
+                </button>
+                <div class="move-wrapper">
+                    <button class="icon-btn" title="Move to channel"
+                        onclick="toggleMoveDropdown(event, ${i.id}, '${i.channel}')">⇄</button>
+                    <div class="move-dropdown"></div>
+                </div>
+                <button class="icon-btn delete" onclick="del(${i.id}, ${i.pinned})" title="Delete">🗑</button>
+            </div>
+        </div>
+        <div class="preview-panel" id="preview-${i.id}"></div>`;
+
         el.appendChild(div);
     });
 }
@@ -793,14 +883,16 @@ document.getElementById("search").addEventListener("input", async e => {
     const q = e.target.value.trim();
 
     if (!q) {
+        document.getElementById("loadMoreWrapper").style.display = "none";
         highlight();
         load();
         return;
     }
 
-    // remove active tab highlight while searching
     document.querySelectorAll(".channels button")
         .forEach(b => b.classList.remove("active"));
+
+    document.getElementById("loadMoreWrapper").style.display = "none";
 
     const res = await fetch(`/search/${q}`);
     const data = await res.json();

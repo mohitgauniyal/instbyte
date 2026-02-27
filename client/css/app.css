@@ -1471,3 +1471,40 @@ input[type=text]:focus {
 :root[data-theme="dark"] .undo-toast {
     background: #374151;
 }
+
+.load-more-btn {
+    background: #f3f4f6;
+    color: #374151;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 10px 24px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.load-more-btn:hover {
+    background: #e5e7eb;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .load-more-btn {
+        background: #1a1d27;
+        color: #d1d5db;
+        border-color: #2d3148;
+    }
+
+    :root:not([data-theme="light"]) .load-more-btn:hover {
+        background: #2d3148;
+    }
+}
+
+:root[data-theme="dark"] .load-more-btn {
+    background: #1a1d27;
+    color: #d1d5db;
+    border-color: #2d3148;
+}
+
+:root[data-theme="dark"] .load-more-btn:hover {
+    background: #2d3148;
+}
