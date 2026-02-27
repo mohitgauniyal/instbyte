@@ -727,3 +727,33 @@ findFreePort(PREFERRED).then(p => {
     console.log("");
   });
 });
+
+
+// ========================
+// GRACEFUL SHUTDOWN
+// ========================
+function shutdown(signal) {
+  console.log(`\n${signal} received — shutting down gracefully...`);
+
+  // stop accepting new connections
+  server.close(() => {
+    console.log("HTTP server closed");
+
+    // close database connection
+    db.close((err) => {
+      if (err) console.error("Error closing database:", err);
+      else console.log("Database connection closed");
+      console.log("Shutdown complete");
+      process.exit(0);
+    });
+  });
+
+  // force exit after 10 seconds if something hangs
+  setTimeout(() => {
+    console.error("Forced shutdown after timeout");
+    process.exit(1);
+  }, 10000);
+}
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
