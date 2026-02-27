@@ -840,6 +840,18 @@ function hideUndoToast() {
     progress.classList.remove("running");
 }
 
+
+// prime AudioContext on first interaction so chime works immediately after
+let audioContextPrimed = false;
+document.addEventListener("click", () => {
+    if (audioContextPrimed) return;
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        ctx.resume().then(() => ctx.close());
+        audioContextPrimed = true;
+    } catch (e) { }
+}, { once: false });
+
 async function pin(id) {
     await fetch("/pin/" + id, { method: "POST" });
     load();
@@ -854,7 +866,6 @@ async function logout() {
 socket.on("new-item", item => {
     if (item.channel === channel) {
         load();
-        console.log("item.uploader:", item.uploader, "| my uploader:", uploader, "| different:", item.uploader !== uploader);
         if (item.uploader !== uploader) playChime();
     }
 });
