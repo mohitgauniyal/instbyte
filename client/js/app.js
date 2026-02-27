@@ -97,6 +97,37 @@ function formatSize(bytes) {
     return bytes + " B";
 }
 
+function playChime() {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+        const gain = ctx.createGain();
+        gain.connect(ctx.destination);
+        gain.gain.setValueAtTime(0, ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.15, ctx.currentTime + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+
+        const osc1 = ctx.createOscillator();
+        osc1.type = "sine";
+        osc1.frequency.setValueAtTime(880, ctx.currentTime);
+        osc1.frequency.exponentialRampToValueAtTime(1100, ctx.currentTime + 0.1);
+        osc1.connect(gain);
+        osc1.start(ctx.currentTime);
+        osc1.stop(ctx.currentTime + 0.6);
+
+        const osc2 = ctx.createOscillator();
+        osc2.type = "sine";
+        osc2.frequency.setValueAtTime(1320, ctx.currentTime + 0.08);
+        osc2.frequency.exponentialRampToValueAtTime(1760, ctx.currentTime + 0.2);
+        osc2.connect(gain);
+        osc2.start(ctx.currentTime + 0.08);
+        osc2.stop(ctx.currentTime + 0.6);
+
+    } catch (e) {
+        // audio not supported or blocked — fail silently
+    }
+}
+
 function getSizeTag(bytes) {
     if (!bytes) return "";
     const mb = bytes / (1024 * 1024);
@@ -821,7 +852,11 @@ async function logout() {
 }
 
 socket.on("new-item", item => {
-    if (item.channel === channel) load();
+    if (item.channel === channel) {
+        load();
+        console.log("item.uploader:", item.uploader, "| my uploader:", uploader, "| different:", item.uploader !== uploader);
+        if (item.uploader !== uploader) playChime();
+    }
 });
 
 socket.on("delete-item", id => {
