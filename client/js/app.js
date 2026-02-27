@@ -397,6 +397,7 @@ document.addEventListener("click", () => {
 
 let channel = null;
 let channels = [];
+let unreadChannels = new Set();
 
 let uploader = localStorage.getItem("name") || "";
 
@@ -434,6 +435,7 @@ function setChannel(c) {
         pendingDeleteEl = null;
         hideUndoToast();
     }
+    unreadChannels.delete(c); // clear unread when switching to channel
     channel = c;
     renderChannels();
     highlight();
@@ -867,6 +869,10 @@ socket.on("new-item", item => {
     if (item.channel === channel) {
         load();
         if (item.uploader !== uploader) playChime();
+    } else if (item.uploader !== uploader) {
+        // item arrived in a different channel — mark it unread
+        unreadChannels.add(item.channel);
+        renderChannels();
     }
 });
 
@@ -1112,6 +1118,12 @@ function renderChannels() {
             dot.className = "ch-pin-dot";
             dot.title = "Pinned — protected from deletion";
             btn.appendChild(dot);
+        }
+
+        if (unreadChannels.has(ch.name)) {
+            const unread = document.createElement("span");
+            unread.className = "ch-unread-dot";
+            btn.appendChild(unread);
         }
 
         const more = document.createElement("span");
