@@ -169,6 +169,12 @@ The difference between *a tool you use* and *a tool you own.*
 
 **Dark mode** — follows system preference automatically. Override with the toggle in the header.
 
+**Undo delete** — recover accidentally removed items instantly before they’re gone.
+
+**New drop alerts** — get a notification sound when something is added in your current channel and visual indicators for activity in others.
+
+**Presence awareness** — see how many people are currently connected in real time.
+
 ---
 
 ## Keyboard Shortcuts
