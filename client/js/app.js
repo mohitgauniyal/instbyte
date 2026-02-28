@@ -963,6 +963,26 @@ document.addEventListener("paste", async e => {
     // if user is typing in input, don't auto-send
     if (active && active.id === "msg") return;
 
+    // check for image in clipboard first
+    const items = e.clipboardData.items;
+    for (const item of items) {
+        if (item.type.startsWith("image/")) {
+            const file = item.getAsFile();
+            if (!file) continue;
+
+            // give it a meaningful name with timestamp
+            const ext = item.type.split("/")[1] || "png";
+            const named = new File(
+                [file],
+                `pasted-${Date.now()}.${ext}`,
+                { type: item.type }
+            );
+            uploadFiles([named]);
+            return; // image found, don't fall through to text
+        }
+    }
+
+    // no image — handle as text
     const text = e.clipboardData.getData("text");
     if (!text) return;
 
