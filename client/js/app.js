@@ -265,21 +265,37 @@ async function togglePreview(id, filename) {
 
         try {
             const res = await fetch(url);
-
             if (!res.ok) throw new Error("Failed to load");
 
-            // Check size via content-length header before reading
             const contentLength = res.headers.get("content-length");
             if (contentLength && parseInt(contentLength) > MAX_TEXT_PREVIEW_BYTES) {
                 panel.innerHTML = `
-          <div class="preview-error">
-            File is too large to preview (${formatSize(parseInt(contentLength))}).
-            <a href="${url}" target="_blank">Open in new tab</a>
-          </div>`;
+              <div class="preview-error">
+                File is too large to preview (${formatSize(parseInt(contentLength))}).
+                <a href="${url}" target="_blank">Open in new tab</a>
+              </div>`;
                 return;
             }
 
             const text = await res.text();
+            const ext = filename.split(".").pop().toLowerCase();
+
+            // markdown files — render as HTML, not syntax-highlighted raw text
+            if (ext === "md") {
+                const html = marked.parse(text);
+                const wrap = document.createElement("div");
+                wrap.className = "markdown-body markdown-preview";
+                wrap.innerHTML = html;
+
+                // syntax highlight any code blocks inside
+                wrap.querySelectorAll("pre code").forEach(el => hljs.highlightElement(el));
+
+                panel.innerHTML = "";
+                panel.appendChild(wrap);
+                return;
+            }
+
+            // all other text files — syntax highlighted raw view
             const lines = text.split("\n");
             const truncated = lines.length > MAX_TEXT_LINES;
             const preview = truncated
@@ -307,9 +323,9 @@ async function togglePreview(id, filename) {
 
         } catch (err) {
             panel.innerHTML = `
-        <div class="preview-error">
-          Could not load preview. <a href="${url}" target="_blank">Open directly</a>
-        </div>`;
+          <div class="preview-error">
+            Could not load preview. <a href="${url}" target="_blank">Open directly</a>
+          </div>`;
         }
     }
 }

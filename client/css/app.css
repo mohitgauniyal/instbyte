@@ -707,6 +707,12 @@ input[type=text]:focus {
     font-size: 12px;
 }
 
+.markdown-preview {
+    padding: 4px 0;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
 .preview-truncated {
     font-size: 11px;
     color: #9ca3af;
@@ -1339,6 +1345,10 @@ input[type=text]:focus {
             background: #2d3148;
         }
 
+        .markdown-preview {
+            color: #e5e7eb;
+        }
+
         #uploadStatus {
             background: #1a1d27 !important;
             color: #e5e7eb !important;
@@ -1663,6 +1673,10 @@ input[type=text]:focus {
 
     .load-more-btn:hover {
         background: #2d3148;
+    }
+
+    .markdown-preview {
+        color: #e5e7eb;
     }
 
     #uploadStatus {
