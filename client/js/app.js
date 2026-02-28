@@ -540,6 +540,10 @@ function buildItemEl(i) {
         ? `<div class="item-title" id="item-title-${i.id}">${escapeHtml(i.title)}</div>`
         : `<div class="item-title" id="item-title-${i.id}" style="display:none"></div>`;
 
+    const editBtn = !isFile
+        ? `<button class="icon-btn" onclick="editContent(${i.id})" title="Edit">✏️</button>`
+        : "";
+
     div.innerHTML = `
         <div class="item-top">
             <div class="left"
@@ -553,6 +557,7 @@ function buildItemEl(i) {
             <div class="item-actions">
                 ${previewBtn}
                 <button class="icon-btn" onclick="editTitle(${i.id})" title="Add title">✎</button>
+                ${editBtn}
                 <button class="icon-btn" onclick="pin(${i.id})" title="${i.pinned ? "Unpin" : "Pin"}">
                     ${i.pinned ? "📍" : "📌"}
                 </button>
@@ -626,6 +631,112 @@ function editTitle(id) {
     });
 
     input.addEventListener("blur", save);
+}
+
+function editContent(id) {
+    const itemEl = document.querySelector(`.item[data-item-id="${id}"]`);
+    if (!itemEl) return;
+
+    const leftEl = itemEl.querySelector(".left");
+    if (!leftEl) return;
+
+    // grab current raw content from data-value
+    const current = leftEl.dataset.value || "";
+
+    // find the content node — everything except .meta and .item-title
+    const metaEl = leftEl.querySelector(".meta");
+    const titleEl = leftEl.querySelector(".item-title");
+
+    // collect content nodes (not meta, not title)
+    const contentNodes = Array.from(leftEl.childNodes).filter(n => {
+        if (n === metaEl) return false;
+        if (n === titleEl) return false;
+        return true;
+    });
+
+    // replace content nodes with textarea
+    const textarea = document.createElement("textarea");
+    textarea.className = "edit-textarea";
+    textarea.value = current;
+
+    contentNodes.forEach(n => n.remove());
+    leftEl.insertBefore(textarea, metaEl);
+    textarea.focus();
+
+    // auto-height
+    textarea.style.height = Math.max(80, textarea.scrollHeight) + "px";
+    textarea.addEventListener("input", () => {
+        textarea.style.height = "auto";
+        textarea.style.height = textarea.scrollHeight + "px";
+    });
+
+    let done = false;
+
+    async function save() {
+        if (done) return;
+        done = true;
+
+        const newContent = textarea.value.trim();
+        if (!newContent) { restore(); return; }
+        if (newContent === current) { restore(); return; }
+
+        const res = await fetch(`/item/${id}/content`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ content: newContent })
+        });
+
+        if (!res.ok) { done = false; restore(); return; }
+
+        leftEl.dataset.value = newContent;
+        restoreWithContent(newContent);
+    }
+
+    function restore() {
+        if (done) return;
+        done = true;
+        restoreWithContent(current);
+    }
+
+    function restoreWithContent(text) {
+        textarea.remove();
+
+        const isLink = text.startsWith("http");
+        let node;
+        if (isLink) {
+            node = document.createElement("a");
+            node.href = text;
+            node.target = "_blank";
+            node.innerText = text;
+        } else {
+            const wrap = document.createElement("div");
+            wrap.innerHTML = renderText(text);
+            node = wrap;
+        }
+
+        leftEl.insertBefore(node, metaEl);
+    }
+
+    textarea.addEventListener("keydown", e => {
+        // Ctrl+Enter or Cmd+Enter saves
+        if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            save();
+        }
+        if (e.key === "Escape") {
+            e.preventDefault();
+            restore();
+        }
+    });
+
+    // blur saves only if focus didn't move to another part of same item
+    textarea.addEventListener("blur", e => {
+        setTimeout(() => {
+            if (!itemEl.contains(document.activeElement)) {
+                save();
+            }
+        }, 150);
+    });
 }
 
 function render(data) {
@@ -840,12 +951,42 @@ socket.on("delete-item", id => {
 });
 
 socket.on("item-updated", ({ id, title, content, edited_at }) => {
-    // update title in DOM if visible
     if (title !== undefined) {
         const titleEl = document.getElementById("item-title-" + id);
         if (titleEl) {
             titleEl.innerText = title;
             titleEl.style.display = title ? "" : "none";
+        }
+    }
+
+    if (content !== undefined) {
+        const itemEl = document.querySelector(`.item[data-item-id="${id}"]`);
+        if (!itemEl) return;
+        const leftEl = itemEl.querySelector(".left");
+        if (!leftEl) return;
+
+        // only update if not currently being edited
+        if (leftEl.querySelector(".edit-textarea")) return;
+
+        leftEl.dataset.value = content;
+
+        const metaEl = leftEl.querySelector(".meta");
+        const titleEl = leftEl.querySelector(".item-title");
+        Array.from(leftEl.childNodes).forEach(n => {
+            if (n !== metaEl && n !== titleEl) n.remove();
+        });
+
+        const isLink = content.startsWith("http");
+        if (isLink) {
+            const a = document.createElement("a");
+            a.href = content;
+            a.target = "_blank";
+            a.innerText = content;
+            leftEl.insertBefore(a, metaEl);
+        } else {
+            const wrap = document.createElement("div");
+            wrap.innerHTML = renderText(content);
+            leftEl.insertBefore(wrap, metaEl);
         }
     }
 });

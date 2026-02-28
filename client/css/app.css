@@ -913,6 +913,35 @@ input[type=text]:focus {
     border-color: var(--color-primary);
 }
 
+.edit-textarea {
+    width: 100%;
+    min-height: 80px;
+    padding: 8px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: system-ui;
+    resize: none;
+    display: block;
+    box-sizing: border-box;
+    line-height: 1.5;
+    color: #111827;
+    background: #f9fafb;
+    margin-bottom: 6px;
+}
+
+.edit-textarea:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    background: #fff;
+}
+
+.edit-hint {
+    font-size: 11px;
+    color: #9ca3af;
+    margin-bottom: 4px;
+}
+
 /* ============================================================
    MOBILE
    ============================================================ */
@@ -1384,6 +1413,17 @@ input[type=text]:focus {
             color: #f3f4f6;
         }
 
+        .edit-textarea {
+            background: #252836;
+            border-color: #2d3148;
+            color: #f3f4f6;
+        }
+
+        .edit-textarea:focus {
+            background: #1a1d27;
+            border-color: #4b5563;
+        }
+
         #uploadStatus {
             background: #1a1d27 !important;
             color: #e5e7eb !important;
@@ -1722,6 +1762,17 @@ input[type=text]:focus {
         background: #252836;
         border-color: #2d3148;
         color: #f3f4f6;
+    }
+
+    .edit-textarea {
+        background: #252836;
+        border-color: #2d3148;
+        color: #f3f4f6;
+    }
+
+    .edit-textarea:focus {
+        background: #1a1d27;
+        border-color: #4b5563;
     }
 
     #uploadStatus {
