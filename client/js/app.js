@@ -483,142 +483,61 @@ async function loadMore() {
     await load(false);
 }
 
-function render(data) {
-    const el = document.getElementById("items");
-    el.innerHTML = "";
+// ========================
+// ITEM RENDERING
+// ========================
+function buildItemContent(i) {
+    if (i.type === "file") {
+        const isImg = i.filename.match(/\.(jpg|png|jpeg|gif)$/i);
+        const sizeLabel = formatSize(i.size);
+        const sizeClass = getSizeTag(i.size);
+        const sizeTag = sizeClass
+            ? `<span class="size-tag ${sizeClass}">${sizeLabel}</span>`
+            : sizeLabel
+                ? `<span style="font-size:11px;color:#9ca3af;margin-left:6px;">${sizeLabel}</span>`
+                : "";
 
-    if (!data.length) {
-        el.innerHTML = `<div class="empty-state">Nothing here yet — paste, type, or drop a file to share</div>`;
-        return;
+        if (isImg) {
+            return `<img src="/uploads/${i.filename}" style="max-width:200px;border-radius:6px"><br>
+                <a href="/uploads/${i.filename}" target="_blank">${i.filename}</a>${sizeTag}`;
+        }
+        return `<a href="/uploads/${i.filename}" target="_blank">${i.filename}</a>${sizeTag}`;
     }
 
-    data.forEach(i => {
-        const div = document.createElement("div");
-        div.className = "item";
-        div.dataset.itemId = i.id;
-
-        let content = "";
-
-        if (i.type === "file") {
-            const isImg = i.filename.match(/\.(jpg|png|jpeg|gif)$/i);
-            const sizeLabel = formatSize(i.size);
-            const sizeClass = getSizeTag(i.size);
-            const sizeTag = sizeClass
-                ? `<span class="size-tag ${sizeClass}">${sizeLabel}</span>`
-                : sizeLabel
-                    ? `<span style="font-size:11px;color:#9ca3af;margin-left:6px;">${sizeLabel}</span>`
-                    : "";
-
-            if (isImg) {
-                content = `<img src="/uploads/${i.filename}" style="max-width:200px;border-radius:6px"><br>
-        <a href="/uploads/${i.filename}" target="_blank">${i.filename}</a>${sizeTag}`;
-            } else {
-                content = `<a href="/uploads/${i.filename}" target="_blank">${i.filename}</a>${sizeTag}`;
-            }
-        } else {
-            const isLink = i.content && i.content.startsWith("http");
-            if (isLink) {
-                content = `<a href="${i.content}" target="_blank">${i.content}</a>`;
-            } else {
-                content = renderText(i.content);
-            }
-        }
-
-        const pinText = i.pinned ? "unpin" : "pin";
-
-        const isFile = i.type === "file";
-        const clickValue = isFile
-            ? `/uploads/${i.filename}`
-            : i.content;
-        const tooltip = isFile ? "Click to download" : "Click to copy";
-
-        div.innerHTML = `
-  <div class="item-top">
-    <div class="left"
-     data-tooltip="${i.type === 'file' ? 'Click to download' : 'Click to copy'}"
-     data-type="${i.type === 'file' ? 'file' : 'text'}"
-data-value="${i.type === 'file'
-                ? `/uploads/${i.filename}`
-                : (i.content || '').replace(/"/g, '&quot;')}">
-  ${content}
-  <div class="meta">${i.uploader}</div>
-</div>
-    <div class="item-actions">
-     ${getPreviewType(i.filename) !== "none" && getPreviewType(i.filename) !== "image"
-                ? `<button class="icon-btn" id="prevbtn-${i.id}"
-       onclick="togglePreview(${i.id}, '${i.filename}')"
-       title="Preview">👁</button>`
-                : ""}
-      <button class="icon-btn" onclick="pin(${i.id})" title="${i.pinned ? 'Unpin' : 'Pin'}">
-        ${i.pinned ? "📍" : "📌"}
-      </button>
-      <div class="move-wrapper">
-        <button class="icon-btn" title="Move to channel"
-          onclick="toggleMoveDropdown(event, ${i.id}, '${i.channel}')">⇄</button>
-        <div class="move-dropdown"></div>
-      </div>
-      <button class="icon-btn delete" onclick="del(${i.id}, ${i.pinned})" title="Delete">🗑</button>
-
-    </div>
-  </div>
-  <div class="preview-panel" id="preview-${i.id}"></div>
-`;
-        el.appendChild(div);
-    });
+    const isLink = i.content && i.content.startsWith("http");
+    if (isLink) return `<a href="${i.content}" target="_blank">${i.content}</a>`;
+    return renderText(i.content);
 }
 
-function renderMore(data) {
-    const el = document.getElementById("items");
-    data.forEach(i => {
-        const div = document.createElement("div");
-        div.className = "item";
-        div.dataset.itemId = i.id;
+function buildItemEl(i) {
+    const div = document.createElement("div");
+    div.className = "item";
+    div.dataset.itemId = i.id;
 
-        let content = "";
+    const content = buildItemContent(i);
+    const isFile = i.type === "file";
+    const dataValue = isFile
+        ? `/uploads/${i.filename}`
+        : (i.content || "").replace(/"/g, "&quot;");
+    const tooltip = isFile ? "Click to download" : "Click to copy";
+    const previewBtn = getPreviewType(i.filename) !== "none" && getPreviewType(i.filename) !== "image"
+        ? `<button class="icon-btn" id="prevbtn-${i.id}"
+             onclick="togglePreview(${i.id}, '${i.filename}')"
+             title="Preview">👁</button>`
+        : "";
 
-        if (i.type === "file") {
-            const isImg = i.filename.match(/\.(jpg|png|jpeg|gif)$/i);
-            const sizeLabel = formatSize(i.size);
-            const sizeClass = getSizeTag(i.size);
-            const sizeTag = sizeClass
-                ? `<span class="size-tag ${sizeClass}">${sizeLabel}</span>`
-                : sizeLabel
-                    ? `<span style="font-size:11px;color:#9ca3af;margin-left:6px;">${sizeLabel}</span>`
-                    : "";
-
-            if (isImg) {
-                content = `<img src="/uploads/${i.filename}" style="max-width:200px;border-radius:6px"><br>
-                <a href="/uploads/${i.filename}" target="_blank">${i.filename}</a>${sizeTag}`;
-            } else {
-                content = `<a href="/uploads/${i.filename}" target="_blank">${i.filename}</a>${sizeTag}`;
-            }
-        } else {
-            const isLink = i.content && i.content.startsWith("http");
-            if (isLink) {
-                content = `<a href="${i.content}" target="_blank">${i.content}</a>`;
-            } else {
-                content = renderText(i.content);
-            }
-        }
-
-        div.innerHTML = `
+    div.innerHTML = `
         <div class="item-top">
             <div class="left"
-             data-tooltip="${i.type === 'file' ? 'Click to download' : 'Click to copy'}"
-             data-type="${i.type === 'file' ? 'file' : 'text'}"
-             data-value="${i.type === 'file'
-                ? `/uploads/${i.filename}`
-                : (i.content || '').replace(/"/g, '&quot;')}">
+                 data-tooltip="${tooltip}"
+                 data-type="${isFile ? "file" : "text"}"
+                 data-value="${dataValue}">
                 ${content}
                 <div class="meta">${i.uploader}</div>
             </div>
             <div class="item-actions">
-                ${getPreviewType(i.filename) !== "none" && getPreviewType(i.filename) !== "image"
-                ? `<button class="icon-btn" id="prevbtn-${i.id}"
-                       onclick="togglePreview(${i.id}, '${i.filename}')"
-                       title="Preview">👁</button>`
-                : ""}
-                <button class="icon-btn" onclick="pin(${i.id})" title="${i.pinned ? 'Unpin' : 'Pin'}">
+                ${previewBtn}
+                <button class="icon-btn" onclick="pin(${i.id})" title="${i.pinned ? "Unpin" : "Pin"}">
                     ${i.pinned ? "📍" : "📌"}
                 </button>
                 <div class="move-wrapper">
@@ -631,8 +550,24 @@ function renderMore(data) {
         </div>
         <div class="preview-panel" id="preview-${i.id}"></div>`;
 
-        el.appendChild(div);
-    });
+    return div;
+}
+
+function render(data) {
+    const el = document.getElementById("items");
+    el.innerHTML = "";
+
+    if (!data.length) {
+        el.innerHTML = `<div class="empty-state">Nothing here yet — paste, type, or drop a file to share</div>`;
+        return;
+    }
+
+    data.forEach(i => el.appendChild(buildItemEl(i)));
+}
+
+function renderMore(data) {
+    const el = document.getElementById("items");
+    data.forEach(i => el.appendChild(buildItemEl(i)));
 }
 
 function renderGrouped(data) {
@@ -644,7 +579,6 @@ function renderGrouped(data) {
         return;
     }
 
-    // group by channel
     const grouped = {};
     data.forEach(item => {
         if (!grouped[item.channel]) grouped[item.channel] = [];
@@ -654,86 +588,11 @@ function renderGrouped(data) {
     Object.keys(grouped).forEach(ch => {
         const section = document.createElement("div");
         section.style.marginTop = "20px";
-
         section.innerHTML = `
-      <div style="font-size:13px;font-weight:600;color:#6b7280;margin-bottom:8px;">
-        ${ch.toUpperCase()}
-      </div>
-    `;
-
-        grouped[ch].forEach(i => {
-            const div = document.createElement("div");
-            div.className = "item";
-            div.dataset.itemId = i.id;
-
-            let content = "";
-
-            if (i.type === "file") {
-                const isImg = i.filename.match(/\.(jpg|png|jpeg|gif)$/i);
-                const sizeLabel = formatSize(i.size);
-                const sizeClass = getSizeTag(i.size);
-                const sizeTag = sizeClass
-                    ? `<span class="size-tag ${sizeClass}">${sizeLabel}</span>`
-                    : sizeLabel
-                        ? `<span style="font-size:11px;color:#9ca3af;margin-left:6px;">${sizeLabel}</span>`
-                        : "";
-
-                if (isImg) {
-                    content = `<img src="/uploads/${i.filename}" style="max-width:200px;border-radius:6px"><br>
-        <a href="/uploads/${i.filename}" target="_blank">${i.filename}</a>${sizeTag}`;
-                } else {
-                    content = `<a href="/uploads/${i.filename}" target="_blank">${i.filename}</a>${sizeTag}`;
-                }
-            } else {
-                const isLink = i.content && i.content.startsWith("http");
-                if (isLink) {
-                    content = `<a href="${i.content}" target="_blank">${i.content}</a>`;
-                } else {
-                    content = renderText(i.content);
-                }
-            }
-
-            const isFile = i.type === "file";
-            const clickValue = isFile
-                ? `/uploads/${i.filename}`
-                : i.content;
-            const tooltip = isFile ? "Click to download" : "Click to copy";
-
-            div.innerHTML = `
-  <div class="item-top">
-    <div class="left"
-     data-tooltip="${i.type === 'file' ? 'Click to download' : 'Click to copy'}"
-     data-type="${i.type === 'file' ? 'file' : 'text'}"
-data-value="${i.type === 'file'
-                    ? `/uploads/${i.filename}`
-                    : (i.content || '').replace(/"/g, '&quot;')}">
-  ${content}
-  <div class="meta">${i.uploader}</div>
-</div>
-    <div class="item-actions">
-      ${getPreviewType(i.filename) !== "none" && getPreviewType(i.filename) !== "image"
-                    ? `<button class="icon-btn" id="prevbtn-${i.id}"
-       onclick="togglePreview(${i.id}, '${i.filename}')"
-       title="Preview">👁</button>`
-                    : ""}
-      <button class="icon-btn" onclick="pin(${i.id})" title="${i.pinned ? 'Unpin' : 'Pin'}">
-        ${i.pinned ? "📍" : "📌"}
-      </button>
-      <div class="move-wrapper">
-        <button class="icon-btn" title="Move to channel"
-          onclick="toggleMoveDropdown(event, ${i.id}, '${i.channel}')">⇄</button>
-        <div class="move-dropdown"></div>
-      </div>
-      <button class="icon-btn delete" onclick="del(${i.id}, ${i.pinned})" title="Delete">🗑</button>
-
-    </div>
-  </div>
-  <div class="preview-panel" id="preview-${i.id}"></div>
-`;
-
-            section.appendChild(div);
-        });
-
+            <div style="font-size:13px;font-weight:600;color:#6b7280;margin-bottom:8px;">
+                ${ch.toUpperCase()}
+            </div>`;
+        grouped[ch].forEach(i => section.appendChild(buildItemEl(i)));
         el.appendChild(section);
     });
 }
