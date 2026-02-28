@@ -396,7 +396,8 @@ input[type=text]:focus {
 
 .item-actions {
     display: flex;
-    gap: 8px;
+    gap: 6px;
+    align-items: flex-start;
 }
 
 .empty-state {
@@ -443,11 +444,16 @@ input[type=text]:focus {
     background: #f9fafb;
     border: 1px solid #e5e7eb;
     border-radius: 6px;
-    padding: 6px 8px;
+    padding: 5px 7px;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 13px;
     line-height: 1;
     color: #6b7280;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .icon-btn:hover {
@@ -965,6 +971,64 @@ input[type=text]:focus {
     margin-left: 6px;
 }
 
+.more-wrapper {
+    position: relative;
+}
+
+.more-btn {
+    font-size: 16px;
+    padding: 4px 7px;
+    letter-spacing: 0;
+    line-height: 1;
+}
+
+.more-dropdown {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    right: 0;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+    min-width: 160px;
+    overflow: hidden;
+    display: none;
+    padding: 4px;
+}
+
+.more-dropdown.open {
+    display: block;
+}
+
+.more-dropdown button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    padding: 8px 12px;
+    font-size: 13px;
+    color: #374151;
+    cursor: pointer;
+    border-radius: 6px;
+}
+
+.more-dropdown button:hover {
+    background: #f3f4f6;
+    color: #111827;
+}
+
+.more-dropdown .dropdown-label {
+    font-size: 11px;
+    color: #9ca3af;
+    padding: 6px 12px 2px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    cursor: default;
+}
+
 /* ============================================================
    MOBILE
    ============================================================ */
@@ -1461,6 +1525,25 @@ input[type=text]:focus {
             color: #6b7280;
         }
 
+        .more-dropdown {
+            background: #1a1d27;
+            border-color: #2d3148;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+        }
+
+        .more-dropdown button {
+            color: #d1d5db;
+        }
+
+        .more-dropdown button:hover {
+            background: #252836;
+            color: #f3f4f6;
+        }
+
+        .more-dropdown .dropdown-label {
+            color: #6b7280;
+        }
+
         #uploadStatus {
             background: #1a1d27 !important;
             color: #e5e7eb !important;
@@ -1823,6 +1906,25 @@ input[type=text]:focus {
     }
 
     .seen-count {
+        color: #6b7280;
+    }
+
+    .more-dropdown {
+        background: #1a1d27;
+        border-color: #2d3148;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    }
+
+    .more-dropdown button {
+        color: #d1d5db;
+    }
+
+    .more-dropdown button:hover {
+        background: #252836;
+        color: #f3f4f6;
+    }
+
+    .more-dropdown .dropdown-label {
         color: #6b7280;
     }
 

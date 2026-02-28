@@ -454,6 +454,48 @@ function toggleMoveDropdown(e, id, currentChannel) {
     openDropdown = dropdown;
 }
 
+function toggleMoreMenu(e, id, currentChannel) {
+    e.stopPropagation();
+
+    const moreDropdown = e.currentTarget.nextElementSibling;
+    const isOpen = moreDropdown.classList.contains("open");
+
+    // close any other open dropdown
+    if (openDropdown && openDropdown !== moreDropdown) {
+        openDropdown.classList.remove("open");
+    }
+
+    if (isOpen) {
+        moreDropdown.classList.remove("open");
+        openDropdown = null;
+        return;
+    }
+
+    // build move list fresh each time
+    const moveList = moreDropdown.querySelector(".move-list");
+    const others = channels.filter(c => c.name !== currentChannel);
+    moveList.innerHTML = "";
+
+    if (others.length === 0) {
+        moveList.innerHTML = `<div class="dropdown-label" style="padding:4px 14px 8px">No other channels</div>`;
+    } else {
+        others.forEach(ch => {
+            const btn = document.createElement("button");
+            btn.innerText = ch.name;
+            btn.onclick = (ev) => {
+                ev.stopPropagation();
+                moveItem(id, ch.name);
+                moreDropdown.classList.remove("open");
+                openDropdown = null;
+            };
+            moveList.appendChild(btn);
+        });
+    }
+
+    moreDropdown.classList.add("open");
+    openDropdown = moreDropdown;
+}
+
 async function moveItem(id, toChannel) {
     await fetch(`/item/${id}/move`, {
         method: "PATCH",
@@ -579,19 +621,19 @@ function buildItemEl(i) {
         ? `/uploads/${i.filename}`
         : (i.content || "").replace(/"/g, "&quot;");
     const tooltip = isFile ? "Click to download" : "Click to copy";
-    const previewBtn = getPreviewType(i.filename) !== "none" && getPreviewType(i.filename) !== "image"
+
+    // contextual slot — preview for files, edit for text, nothing otherwise
+    const contextualBtn = getPreviewType(i.filename) !== "none" && getPreviewType(i.filename) !== "image"
         ? `<button class="icon-btn" id="prevbtn-${i.id}"
              onclick="togglePreview(${i.id}, '${i.filename}')"
              title="Preview">👁</button>`
-        : "";
+        : !isFile
+            ? `<button class="icon-btn" onclick="editContent(${i.id})" title="Edit content">✏️</button>`
+            : "";
 
     const titleHtml = i.title
         ? `<div class="item-title" id="item-title-${i.id}">${escapeHtml(i.title)}</div>`
         : `<div class="item-title" id="item-title-${i.id}" style="display:none"></div>`;
-
-    const editBtn = !isFile
-        ? `<button class="icon-btn" onclick="editContent(${i.id})" title="Edit">✏️</button>`
-        : "";
 
     div.innerHTML = `
         <div class="item-top">
@@ -608,21 +650,24 @@ function buildItemEl(i) {
                 </div>
             </div>
             <div class="item-actions">
-                ${previewBtn}
-                <button class="icon-btn" onclick="editTitle(${i.id})" title="Add title">✎</button>
-                ${editBtn}
+                ${contextualBtn}
                 <button class="icon-btn" onclick="pin(${i.id})" title="${i.pinned ? "Unpin" : "Pin"}">
                     ${i.pinned ? "📍" : "📌"}
                 </button>
-                <div class="move-wrapper">
-                    <button class="icon-btn" title="Move to channel"
-                        onclick="toggleMoveDropdown(event, ${i.id}, '${i.channel}')">⇄</button>
-                    <div class="move-dropdown"></div>
-                </div>
                 <button class="icon-btn delete" onclick="del(${i.id}, ${i.pinned})" title="Delete">🗑</button>
+                <div class="more-wrapper">
+                    <button class="icon-btn more-btn" onclick="toggleMoreMenu(event, ${i.id}, '${i.channel}')" title="More">⋮</button>
+                    <div class="more-dropdown">
+                        <button onclick="editTitle(${i.id})">🏷 Add / edit title</button>
+                        <div class="menu-divider"></div>
+                        <div class="dropdown-label">Move to</div>
+                        <div class="move-list"></div>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="preview-panel" id="preview-${i.id}"></div>`;
+
     seenObserver.observe(div);
     return div;
 }
