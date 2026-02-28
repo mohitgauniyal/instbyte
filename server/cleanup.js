@@ -9,7 +9,7 @@ setInterval(() => {
   const cutoff = Date.now() - DAY;
 
   db.all(
-    `SELECT * FROM items WHERE created_at < ?`,
+    `SELECT * FROM items WHERE created_at < ? AND pinned = 0`,
     [cutoff],
     (err, rows) => {
       rows.forEach((item) => {
