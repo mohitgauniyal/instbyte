@@ -525,6 +525,45 @@ app.patch("/item/:id/move", (req, res) => {
   });
 });
 
+/* UPDATE ITEM TITLE */
+app.patch("/item/:id/title", (req, res) => {
+  const { id } = req.params;
+  const { title } = req.body;
+
+  if (title === undefined) return res.status(400).json({ error: "Title required" });
+
+  db.run(
+    "UPDATE items SET title=? WHERE id=?",
+    [title.trim(), id],
+    function (err) {
+      if (err) return res.status(500).json({ error: "Update failed" });
+      if (this.changes === 0) return res.status(404).json({ error: "Item not found" });
+      io.emit("item-updated", { id: parseInt(id), title: title.trim() });
+      res.json({ id, title: title.trim() });
+    }
+  );
+});
+
+/* UPDATE ITEM CONTENT */
+app.patch("/item/:id/content", (req, res) => {
+  const { id } = req.params;
+  const { content } = req.body;
+
+  if (content === undefined) return res.status(400).json({ error: "Content required" });
+  if (content.trim() === "") return res.status(400).json({ error: "Content cannot be empty" });
+
+  db.run(
+    "UPDATE items SET content=?, edited_at=? WHERE id=? AND type='text'",
+    [content.trim(), Date.now(), id],
+    function (err) {
+      if (err) return res.status(500).json({ error: "Update failed" });
+      if (this.changes === 0) return res.status(404).json({ error: "Item not found or not editable" });
+      io.emit("item-updated", { id: parseInt(id), content: content.trim(), edited_at: Date.now() });
+      res.json({ id, content: content.trim() });
+    }
+  );
+});
+
 /* RENAME CHANNEL */
 app.patch("/channels/:name", (req, res) => {
   const oldName = req.params.name;

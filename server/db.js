@@ -36,6 +36,9 @@ db.serialize(() => {
   db.run(`ALTER TABLE items ADD COLUMN size INTEGER DEFAULT 0`, () => { });
   db.run(`ALTER TABLE channels ADD COLUMN pinned INTEGER DEFAULT 0`, () => { });
 
+  db.run(`ALTER TABLE items ADD COLUMN title TEXT DEFAULT ''`, () => { });
+  db.run(`ALTER TABLE items ADD COLUMN edited_at INTEGER DEFAULT NULL`, () => { });
+
   // Insert default channels if empty
   db.get("SELECT COUNT(*) as count FROM channels", (err, row) => {
     if (err) {
