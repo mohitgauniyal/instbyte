@@ -920,14 +920,14 @@ input[type=text]:focus {
 }
 
 .edit-textarea {
-    width: 100%;
+    width: min(600px, 60vw);
     min-height: 80px;
     padding: 8px 10px;
     border: 1px solid #d1d5db;
     border-radius: 6px;
     font-size: 14px;
     font-family: system-ui;
-    resize: none;
+    resize: vertical;
     display: block;
     box-sizing: border-box;
     line-height: 1.5;
@@ -1027,6 +1027,17 @@ input[type=text]:focus {
     text-transform: uppercase;
     letter-spacing: 0.05em;
     cursor: default;
+}
+
+.icon-btn i {
+    width: 14px;
+    height: 14px;
+    display: block;
+    stroke-width: 2;
+}
+
+.icon-btn.pinned i {
+    color: #f59e0b;
 }
 
 /* ============================================================
@@ -1544,6 +1555,10 @@ input[type=text]:focus {
             color: #6b7280;
         }
 
+        .icon-btn.pinned i {
+            color: #f59e0b;
+        }
+
         #uploadStatus {
             background: #1a1d27 !important;
             color: #e5e7eb !important;
@@ -1926,6 +1941,10 @@ input[type=text]:focus {
 
     .more-dropdown .dropdown-label {
         color: #6b7280;
+    }
+
+    .icon-btn.pinned i {
+        color: #f59e0b;
     }
 
     #uploadStatus {

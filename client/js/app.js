@@ -625,10 +625,10 @@ function buildItemEl(i) {
     // contextual slot — preview for files, edit for text, nothing otherwise
     const contextualBtn = getPreviewType(i.filename) !== "none" && getPreviewType(i.filename) !== "image"
         ? `<button class="icon-btn" id="prevbtn-${i.id}"
-             onclick="togglePreview(${i.id}, '${i.filename}')"
-             title="Preview">👁</button>`
+           onclick="togglePreview(${i.id}, '${i.filename}')"
+           title="Preview"><i data-lucide="eye"></i></button>`
         : !isFile
-            ? `<button class="icon-btn" onclick="editContent(${i.id})" title="Edit content">✏️</button>`
+            ? `<button class="icon-btn" onclick="editContent(${i.id})" title="Edit content"><i data-lucide="pencil-line"></i></button>`
             : "";
 
     const titleHtml = i.title
@@ -636,39 +636,48 @@ function buildItemEl(i) {
         : `<div class="item-title" id="item-title-${i.id}" style="display:none"></div>`;
 
     div.innerHTML = `
-        <div class="item-top">
-            <div class="left"
-                 data-tooltip="${tooltip}"
-                 data-type="${isFile ? "file" : "text"}"
-                 data-value="${dataValue}">
-                ${titleHtml}
-                ${content}
-                <div class="meta">
-                    ${i.uploader}
-                    <span class="seen-count" id="seen-${i.id}" style="display:none">👁 <span class="seen-num"></span></span>
-                    ${getExpiryBadge(i.created_at)}
-                </div>
+    <div class="item-top">
+        <div class="left"
+             data-tooltip="${tooltip}"
+             data-type="${isFile ? "file" : "text"}"
+             data-value="${dataValue}">
+            ${titleHtml}
+            ${content}
+            <div class="meta">
+                ${i.uploader}
+                <span class="seen-count" id="seen-${i.id}" style="display:none">
+                    <i data-lucide="eye"></i> <span class="seen-num"></span>
+                </span>
+                ${getExpiryBadge(i.created_at)}
             </div>
-            <div class="item-actions">
-                ${contextualBtn}
-                <button class="icon-btn" onclick="pin(${i.id})" title="${i.pinned ? "Unpin" : "Pin"}">
-                    ${i.pinned ? "📍" : "📌"}
+        </div>
+        <div class="item-actions">
+            ${contextualBtn}
+            <button class="icon-btn ${i.pinned ? "pinned" : ""}" onclick="pin(${i.id})" title="${i.pinned ? "Unpin" : "Pin"}">
+                <i data-lucide="${i.pinned ? "pin-off" : "pin"}"></i>
+            </button>
+            <button class="icon-btn delete" onclick="del(${i.id}, ${i.pinned})" title="Delete">
+                <i data-lucide="trash-2"></i>
+            </button>
+            <div class="more-wrapper">
+                <button class="icon-btn more-btn" onclick="toggleMoreMenu(event, ${i.id}, '${i.channel}')" title="More">
+                    <i data-lucide="more-vertical"></i>
                 </button>
-                <button class="icon-btn delete" onclick="del(${i.id}, ${i.pinned})" title="Delete">🗑</button>
-                <div class="more-wrapper">
-                    <button class="icon-btn more-btn" onclick="toggleMoreMenu(event, ${i.id}, '${i.channel}')" title="More">⋮</button>
-                    <div class="more-dropdown">
-                        <button onclick="editTitle(${i.id})">🏷 Add / edit title</button>
-                        <div class="menu-divider"></div>
-                        <div class="dropdown-label">Move to</div>
-                        <div class="move-list"></div>
-                    </div>
+                <div class="more-dropdown">
+                    <button onclick="editTitle(${i.id})">
+                        <i data-lucide="tag"></i> Add / edit title
+                    </button>
+                    <div class="menu-divider"></div>
+                    <div class="dropdown-label">Move to</div>
+                    <div class="move-list"></div>
                 </div>
             </div>
         </div>
-        <div class="preview-panel" id="preview-${i.id}"></div>`;
+    </div>
+    <div class="preview-panel" id="preview-${i.id}"></div>`;
 
     seenObserver.observe(div);
+    if (typeof lucide !== "undefined") lucide.createIcons({ nodes: [div] });
     return div;
 }
 
