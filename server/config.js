@@ -30,6 +30,7 @@ function parseFileSize(val) {
 }
 
 function parseRetention(val) {
+    if (String(val).toLowerCase() === "never") return null;
     if (typeof val === "number") return val;
     const units = { h: 3600000, d: 86400000 };
     const match = String(val).match(/^(\d+)(h|d)$/i);

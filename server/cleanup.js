@@ -3,10 +3,9 @@ const fs = require("fs");
 const path = require("path");
 const config = require("./config");
 
-const DAY = config.storage.retention;
-
 setInterval(() => {
-  const cutoff = Date.now() - DAY;
+  if (config.storage.retention === null) return;
+  const cutoff = Date.now() - config.storage.retention;
 
   db.all(
     `SELECT * FROM items WHERE created_at < ? AND pinned = 0`,
