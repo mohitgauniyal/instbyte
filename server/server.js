@@ -612,7 +612,8 @@ app.post("/channels/:name/pin", (req, res) => {
 app.get("/info", (req, res) => {
   res.json({
     url: `http://${localIP}:${PORT}`,
-    hasAuth: !!config.auth.passphrase
+    hasAuth: !!config.auth.passphrase,
+    retention: config.storage.retention  // null means "never"
   });
 });
 

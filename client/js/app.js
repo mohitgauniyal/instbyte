@@ -2,6 +2,7 @@ const socket = io();
 
 let currentPage = 1;
 let hasMoreItems = false;
+let retention = 24 * 60 * 60 * 1000; // default 24h, overwritten on init
 
 // ========================
 // THEME MANAGEMENT (FIXED)
@@ -96,6 +97,24 @@ function formatSize(bytes) {
     if (bytes >= 1024 ** 2) return (bytes / 1024 ** 2).toFixed(1) + " MB";
     if (bytes >= 1024) return (bytes / 1024).toFixed(1) + " KB";
     return bytes + " B";
+}
+
+function getExpiryBadge(createdAt) {
+    // if retention is null ("never"), nothing expires
+    if (retention === null) return "";
+
+    const expiresAt = createdAt + retention;
+    const remaining = expiresAt - Date.now();
+    const THREE_HOURS = 3 * 60 * 60 * 1000;
+
+    if (remaining > THREE_HOURS) return "";
+    if (remaining <= 0) return `<span class="expiry-badge expiry-gone">expired</span>`;
+
+    const m = Math.floor(remaining / 60000);
+    const h = Math.floor(m / 60);
+    const label = h > 0 ? `${h}h ${m % 60}m` : `${m}m`;
+
+    return `<span class="expiry-badge">⏱ ${label}</span>`;
 }
 
 function escapeHtml(str) {
@@ -552,7 +571,7 @@ function buildItemEl(i) {
                  data-value="${dataValue}">
                 ${titleHtml}
                 ${content}
-                <div class="meta">${i.uploader}</div>
+                <div class="meta">${i.uploader}${getExpiryBadge(i.created_at)}</div>
             </div>
             <div class="item-actions">
                 ${previewBtn}
@@ -1456,6 +1475,7 @@ document.addEventListener("keydown", e => {
     if (!info.hasAuth) {
         document.getElementById("logoutBtn").style.display = "none";
     }
+    retention = info.retention; // null if "never", ms value otherwise
     await loadChannels();
     load();
 })();

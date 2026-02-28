@@ -942,6 +942,23 @@ input[type=text]:focus {
     margin-bottom: 4px;
 }
 
+.expiry-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 500;
+    padding: 1px 6px;
+    border-radius: 4px;
+    margin-left: 6px;
+    vertical-align: middle;
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.expiry-badge.expiry-gone {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
 /* ============================================================
    MOBILE
    ============================================================ */
@@ -1424,6 +1441,16 @@ input[type=text]:focus {
             border-color: #4b5563;
         }
 
+        .expiry-badge {
+            background: #422006;
+            color: #fbbf24;
+        }
+
+        .expiry-badge.expiry-gone {
+            background: #2d1515;
+            color: #f87171;
+        }
+
         #uploadStatus {
             background: #1a1d27 !important;
             color: #e5e7eb !important;
@@ -1773,6 +1800,16 @@ input[type=text]:focus {
     .edit-textarea:focus {
         background: #1a1d27;
         border-color: #4b5563;
+    }
+
+    .expiry-badge {
+        background: #422006;
+        color: #fbbf24;
+    }
+
+    .expiry-badge.expiry-gone {
+        background: #2d1515;
+        color: #f87171;
     }
 
     #uploadStatus {
