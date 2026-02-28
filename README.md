@@ -63,7 +63,7 @@ One person runs the server — everyone else on the same WiFi opens the URL in t
 
 **Sharing is instant:**
 - Type or paste text → hit Send
-- Paste anywhere on the page → auto-sends
+- Paste anywhere on the page → auto-sends text or uploads images directly
 - Drag a file anywhere onto the page → uploads
 - Click any text item → copies to clipboard
 - Click any file item → downloads
@@ -125,7 +125,7 @@ Instbyte works out of the box with zero configuration. All options are optional 
 | `server.port` | `3000` | Port to run on. Overridden by `PORT` env var if set |
 | `auth.passphrase` | `""` | Shared passphrase for access. Empty = no auth |
 | `storage.maxFileSize` | `"2GB"` | Max upload size. Accepts `KB`, `MB`, `GB` |
-| `storage.retention` | `"24h"` | How long before items auto-delete. Accepts `h`, `d` |
+| `storage.retention` | `"24h"` | How long before items auto-delete. Accepts `h`, `d`, or `"never"` to disable cleanup entirely |
 | `branding.appName` | `"Instbyte"` | App name in header and browser tab |
 | `branding.primaryColor` | `"#111827"` | Primary brand color in hex. Full palette auto-derived |
 | `branding.logoPath` | — | Path to your logo file relative to where you run the command |
@@ -163,7 +163,7 @@ The difference between *a tool you use* and *a tool you own.*
 
 **Smart port handling** — if port 3000 is busy, Instbyte finds the next available port automatically.
 
-**Short-lived by design** — all content auto-deletes after 24 hours. Nothing lingers.
+**Short-lived by design** — content auto-deletes after 24 hours by default. Configure retention per your needs, or disable cleanup entirely.
 
 **QR join** — built-in QR code so phones can join instantly without typing the URL.
 
@@ -175,6 +175,9 @@ The difference between *a tool you use* and *a tool you own.*
 
 **Presence awareness** — see how many people are currently connected in real time.
 
+**Read receipts** — see how many devices have viewed each shared item. Updates live as teammates open the page.
+
+**Item management** — add optional titles to label any item for future reference. Edit text items inline without deleting and re-pasting. Pinned items are protected from both manual deletion and auto-cleanup.
 ---
 
 ## Keyboard Shortcuts

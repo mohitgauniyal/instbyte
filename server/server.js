@@ -707,12 +707,13 @@ io.on("connection", (socket) => {
     console.log(username + " connected | total:", connectedUsers);
   });
 
-  socket.on("seen", (itemId) => {
-    if (!itemId) return;
-    if (!seenBy.has(itemId)) seenBy.set(itemId, new Set());
-    seenBy.get(itemId).add(socket.id);
-    const count = seenBy.get(itemId).size;
-    io.emit("seen-update", { id: itemId, count });
+  socket.on("seen", ({ id, name }) => {
+    if (!id || !name) return;
+    if (!seenBy.has(id)) seenBy.set(id, new Set());
+    seenBy.get(id).add(name); // name instead of socket.id
+    const count = seenBy.get(id).size;
+    console.log(`seen: item ${id} | count: ${count}`);
+    io.emit("seen-update", { id, count });
   });
 
   socket.on("disconnect", () => {

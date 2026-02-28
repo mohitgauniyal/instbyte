@@ -3,7 +3,7 @@ const socket = io();
 let currentPage = 1;
 let hasMoreItems = false;
 let retention = 24 * 60 * 60 * 1000; // default 24h, overwritten on init
-
+const newItemIds = new Set();
 const seenEmitted = new Set(); // item IDs this session has already emitted seen for
 
 const seenObserver = new IntersectionObserver((entries) => {
@@ -16,7 +16,7 @@ const seenObserver = new IntersectionObserver((entries) => {
         const timer = setTimeout(() => {
             if (seenEmitted.has(id)) return;
             seenEmitted.add(id);
-            socket.emit("seen", id);
+            socket.emit("seen", { id, name: uploader });
             seenObserver.unobserve(entry.target); // done with this element
         }, 1000);
 
@@ -613,6 +613,14 @@ function buildItemContent(i) {
 function buildItemEl(i) {
     const div = document.createElement("div");
     div.className = "item";
+
+    if (newItemIds.has(i.id) && !i.pinned) {
+        div.classList.add("item-new");
+        setTimeout(() => {
+            div.classList.remove("item-new");
+            newItemIds.delete(i.id);
+        }, 4000);
+    }
     div.dataset.itemId = i.id;
 
     const content = buildItemContent(i);
@@ -645,9 +653,7 @@ function buildItemEl(i) {
             ${content}
             <div class="meta">
                 ${i.uploader}
-                <span class="seen-count" id="seen-${i.id}" style="display:none">
-                    <i data-lucide="eye"></i> <span class="seen-num"></span>
-                </span>
+                <span class="seen-count" id="seen-${i.id}" style="display:none">👁 <span class="seen-num"></span></span>
                 ${getExpiryBadge(i.created_at)}
             </div>
         </div>
@@ -1035,10 +1041,11 @@ async function logout() {
 
 socket.on("new-item", item => {
     if (item.channel === channel) {
+        if (!item.pinned) newItemIds.add(item.id);
         load();
         if (item.uploader !== uploader) playChime();
     } else if (item.uploader !== uploader) {
-        // item arrived in a different channel — mark it unread
+        if (!item.pinned) newItemIds.add(item.id);
         unreadChannels.add(item.channel);
         renderChannels();
     }

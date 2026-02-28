@@ -966,7 +966,7 @@ input[type=text]:focus {
 }
 
 .seen-count {
-    font-size: 11px;
+    font-size: px;
     color: #9ca3af;
     margin-left: 6px;
 }
@@ -1038,6 +1038,13 @@ input[type=text]:focus {
 
 .icon-btn.pinned i {
     color: #f59e0b;
+}
+
+.item-new {
+    border-left: 3px solid #22c55e;
+    padding-left: 13px;
+    background: #f0fdf4;
+    transition: background 1.5s ease, border-color 1.5s ease;
 }
 
 /* ============================================================
@@ -1559,6 +1566,12 @@ input[type=text]:focus {
             color: #f59e0b;
         }
 
+        .item-new {
+            border-left: 3px solid #16a34a;
+            padding-left: 13px;
+            background: #052e16;
+        }
+
         #uploadStatus {
             background: #1a1d27 !important;
             color: #e5e7eb !important;
@@ -1945,6 +1958,12 @@ input[type=text]:focus {
 
     .icon-btn.pinned i {
         color: #f59e0b;
+    }
+
+    .item-new {
+        border-left: 3px solid #16a34a;
+        padding-left: 13px;
+        background: #052e16;
     }
 
     #uploadStatus {
