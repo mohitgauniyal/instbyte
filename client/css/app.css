@@ -959,6 +959,12 @@ input[type=text]:focus {
     color: #991b1b;
 }
 
+.seen-count {
+    font-size: 11px;
+    color: #9ca3af;
+    margin-left: 6px;
+}
+
 /* ============================================================
    MOBILE
    ============================================================ */
@@ -1451,6 +1457,10 @@ input[type=text]:focus {
             color: #f87171;
         }
 
+        .seen-count {
+            color: #6b7280;
+        }
+
         #uploadStatus {
             background: #1a1d27 !important;
             color: #e5e7eb !important;
@@ -1810,6 +1820,10 @@ input[type=text]:focus {
     .expiry-badge.expiry-gone {
         background: #2d1515;
         color: #f87171;
+    }
+
+    .seen-count {
+        color: #6b7280;
     }
 
     #uploadStatus {

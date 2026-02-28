@@ -4,6 +4,36 @@ let currentPage = 1;
 let hasMoreItems = false;
 let retention = 24 * 60 * 60 * 1000; // default 24h, overwritten on init
 
+const seenEmitted = new Set(); // item IDs this session has already emitted seen for
+
+const seenObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        const id = parseInt(entry.target.dataset.itemId);
+        if (!id || seenEmitted.has(id)) return;
+
+        // wait 1 second of visibility before counting as seen
+        const timer = setTimeout(() => {
+            if (seenEmitted.has(id)) return;
+            seenEmitted.add(id);
+            socket.emit("seen", id);
+            seenObserver.unobserve(entry.target); // done with this element
+        }, 1000);
+
+        // if element leaves viewport before 1s, cancel
+        entry.target._seenTimer = timer;
+    });
+
+    // cancel timers for elements that left viewport
+    entries.forEach(entry => {
+        if (entry.isIntersecting) return;
+        if (entry.target._seenTimer) {
+            clearTimeout(entry.target._seenTimer);
+            entry.target._seenTimer = null;
+        }
+    });
+}, { threshold: 0.5 }); // at least 50% of item must be visible
+
 // ========================
 // THEME MANAGEMENT (FIXED)
 // ========================
@@ -571,7 +601,11 @@ function buildItemEl(i) {
                  data-value="${dataValue}">
                 ${titleHtml}
                 ${content}
-                <div class="meta">${i.uploader}${getExpiryBadge(i.created_at)}</div>
+                <div class="meta">
+                    ${i.uploader}
+                    <span class="seen-count" id="seen-${i.id}" style="display:none">👁 <span class="seen-num"></span></span>
+                    ${getExpiryBadge(i.created_at)}
+                </div>
             </div>
             <div class="item-actions">
                 ${previewBtn}
@@ -589,7 +623,7 @@ function buildItemEl(i) {
             </div>
         </div>
         <div class="preview-panel" id="preview-${i.id}"></div>`;
-
+    seenObserver.observe(div);
     return div;
 }
 
@@ -1007,6 +1041,15 @@ socket.on("item-updated", ({ id, title, content, edited_at }) => {
             wrap.innerHTML = renderText(content);
             leftEl.insertBefore(wrap, metaEl);
         }
+    }
+});
+
+socket.on("seen-update", ({ id, count }) => {
+    const el = document.getElementById("seen-" + id);
+    if (!el) return;
+    if (count >= 2) {
+        el.querySelector(".seen-num").innerText = count;
+        el.style.display = "";
     }
 });
 

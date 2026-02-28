@@ -690,6 +690,9 @@ app.get("/logo-dynamic.png", (req, res) => {
 /* ============================
    SOCKET CONNECTION LOGGING
 ============================ */
+// in-memory seen tracking — item id → Set of socket ids
+// resets on server restart, no DB needed
+const seenBy = new Map();
 
 let connectedUsers = 0;
 
@@ -702,6 +705,14 @@ io.on("connection", (socket) => {
   socket.on("join", (name) => {
     username = name || "Unknown";
     console.log(username + " connected | total:", connectedUsers);
+  });
+
+  socket.on("seen", (itemId) => {
+    if (!itemId) return;
+    if (!seenBy.has(itemId)) seenBy.set(itemId, new Set());
+    seenBy.get(itemId).add(socket.id);
+    const count = seenBy.get(itemId).size;
+    io.emit("seen-update", { id: itemId, count });
   });
 
   socket.on("disconnect", () => {
