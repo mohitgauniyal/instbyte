@@ -89,12 +89,22 @@ async function applyBranding() {
         // Branding failed — default styles remain, no crash
     }
 }
+
 function formatSize(bytes) {
     if (!bytes) return "";
     if (bytes >= 1024 ** 3) return (bytes / 1024 ** 3).toFixed(1) + " GB";
     if (bytes >= 1024 ** 2) return (bytes / 1024 ** 2).toFixed(1) + " MB";
     if (bytes >= 1024) return (bytes / 1024).toFixed(1) + " KB";
     return bytes + " B";
+}
+
+function escapeHtml(str) {
+    if (!str) return "";
+    return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
 }
 
 function playChime() {
@@ -526,17 +536,23 @@ function buildItemEl(i) {
              title="Preview">👁</button>`
         : "";
 
+    const titleHtml = i.title
+        ? `<div class="item-title" id="item-title-${i.id}">${escapeHtml(i.title)}</div>`
+        : `<div class="item-title" id="item-title-${i.id}" style="display:none"></div>`;
+
     div.innerHTML = `
         <div class="item-top">
             <div class="left"
                  data-tooltip="${tooltip}"
                  data-type="${isFile ? "file" : "text"}"
                  data-value="${dataValue}">
+                ${titleHtml}
                 ${content}
                 <div class="meta">${i.uploader}</div>
             </div>
             <div class="item-actions">
                 ${previewBtn}
+                <button class="icon-btn" onclick="editTitle(${i.id})" title="Add title">✎</button>
                 <button class="icon-btn" onclick="pin(${i.id})" title="${i.pinned ? "Unpin" : "Pin"}">
                     ${i.pinned ? "📍" : "📌"}
                 </button>
@@ -551,6 +567,65 @@ function buildItemEl(i) {
         <div class="preview-panel" id="preview-${i.id}"></div>`;
 
     return div;
+}
+
+function editTitle(id) {
+    const titleEl = document.getElementById("item-title-" + id);
+    if (!titleEl) return;
+
+    const current = titleEl.dataset.value || titleEl.innerText.trim();
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "title-input";
+    input.value = current;
+    input.placeholder = "Add a title...";
+    input.maxLength = 100;
+
+    titleEl.replaceWith(input);
+    input.focus();
+    input.select();
+
+    async function save() {
+        const newTitle = input.value.trim();
+        const res = await fetch(`/item/${id}/title`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title: newTitle })
+        });
+        if (!res.ok) { restore(); return; }
+
+        const fresh = document.createElement("div");
+        fresh.className = "item-title";
+        fresh.id = "item-title-" + id;
+        if (newTitle) {
+            fresh.innerText = newTitle;
+            fresh.style.display = "";
+        } else {
+            fresh.style.display = "none";
+        }
+        input.replaceWith(fresh);
+    }
+
+    function restore() {
+        const fresh = document.createElement("div");
+        fresh.className = "item-title";
+        fresh.id = "item-title-" + id;
+        if (current) {
+            fresh.innerText = current;
+            fresh.style.display = "";
+        } else {
+            fresh.style.display = "none";
+        }
+        input.replaceWith(fresh);
+    }
+
+    input.addEventListener("keydown", e => {
+        if (e.key === "Enter") { e.preventDefault(); save(); }
+        if (e.key === "Escape") { e.preventDefault(); restore(); }
+    });
+
+    input.addEventListener("blur", save);
 }
 
 function render(data) {
@@ -761,6 +836,17 @@ socket.on("delete-item", id => {
     const items = document.getElementById("items");
     if (items && !items.querySelector(".item")) {
         items.innerHTML = `<div class="empty-state">Nothing here yet — paste, type, or drop a file to share</div>`;
+    }
+});
+
+socket.on("item-updated", ({ id, title, content, edited_at }) => {
+    // update title in DOM if visible
+    if (title !== undefined) {
+        const titleEl = document.getElementById("item-title-" + id);
+        if (titleEl) {
+            titleEl.innerText = title;
+            titleEl.style.display = title ? "" : "none";
+        }
     }
 });
 

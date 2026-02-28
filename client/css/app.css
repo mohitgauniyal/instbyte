@@ -887,6 +887,31 @@ input[type=text]:focus {
     background: #e5e7eb;
 }
 
+.item-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+}
+
+.title-input {
+    font-size: 12px;
+    padding: 3px 7px;
+    border: 1px solid #d1d5db;
+    border-radius: 5px;
+    margin-bottom: 4px;
+    width: 200px;
+    display: block;
+    color: #111827;
+    background: #fff;
+}
+
+.title-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+}
 
 /* ============================================================
    MOBILE
@@ -1349,6 +1374,16 @@ input[type=text]:focus {
             color: #e5e7eb;
         }
 
+        .item-title {
+            color: #6b7280;
+        }
+
+        .title-input {
+            background: #252836;
+            border-color: #2d3148;
+            color: #f3f4f6;
+        }
+
         #uploadStatus {
             background: #1a1d27 !important;
             color: #e5e7eb !important;
@@ -1677,6 +1712,16 @@ input[type=text]:focus {
 
     .markdown-preview {
         color: #e5e7eb;
+    }
+
+    .item-title {
+        color: #6b7280;
+    }
+
+    .title-input {
+        background: #252836;
+        border-color: #2d3148;
+        color: #f3f4f6;
     }
 
     #uploadStatus {
