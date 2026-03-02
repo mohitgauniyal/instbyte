@@ -21,6 +21,29 @@ const config = require("./config");
 const UPLOADS_DIR = process.env.INSTBYTE_UPLOADS
   || path.join(__dirname, "../uploads");
 
+/* STARTUP ORPHAN SCAN
+ Deletes any files in uploads dir that have no matching DB record.
+ Catches ghost files left by aborted uploads before fix in v1.9.1 */
+function scanOrphans() {
+  fs.readdir(UPLOADS_DIR, (err, files) => {
+    if (err || !files || !files.length) return;
+
+    db.all("SELECT filename FROM items WHERE filename IS NOT NULL", (err, rows) => {
+      if (err) return;
+
+      const known = new Set(rows.map(r => r.filename));
+      files.forEach(file => {
+        if (!known.has(file)) {
+          const orphan = path.join(UPLOADS_DIR, file);
+          fs.unlink(orphan, err => {
+            if (!err) console.log("Orphan removed:", file);
+          });
+        }
+      });
+    });
+  });
+}
+
 const CLIENT_DIR = path.join(__dirname, "../client");
 
 const app = express();
@@ -808,6 +831,7 @@ findFreePort(PREFERRED).then(p => {
       console.log(`(port ${PREFERRED} was busy, switched to ${PORT})`);
     }
     console.log("");
+    scanOrphans(); // clean up any pre-v1.9.1 ghost files
   });
 });
 
