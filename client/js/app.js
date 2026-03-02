@@ -1250,13 +1250,32 @@ async function uploadFiles(files) {
             const xhr = new XMLHttpRequest();
             xhr.open("POST", "/upload", true);
 
+            // Stall detection — if no progress for 30s, the connection is dead.
+            // We don't use xhr.timeout because that would kill legitimate large
+            // file uploads on slow LANs.
+            // Instead we track the last progress event and abort if nothing moves for 30 seconds.
+            const STALL_MS = 30_000;
+            let stallTimer = null;
+
+            function resetStallTimer() {
+                clearTimeout(stallTimer);
+                stallTimer = setTimeout(() => {
+                    xhr.abort();
+                    text.innerText = `⚠ ${file.name} stalled — skipped`;
+                    bar.style.width = "0%";
+                    setTimeout(resolve, 1200);
+                }, STALL_MS);
+            }
+
             xhr.upload.onprogress = e => {
                 if (e.lengthComputable) {
                     bar.style.width = Math.round((e.loaded / e.total) * 100) + "%";
                 }
+                resetStallTimer(); // data is moving, push the timer out
             };
 
             xhr.onload = () => {
+                clearTimeout(stallTimer);
                 if (xhr.status === 413) {
                     text.innerText = `⚠ ${file.name} is too large — skipped`;
                     bar.style.width = "0%";
@@ -1267,11 +1286,21 @@ async function uploadFiles(files) {
             };
 
             xhr.onerror = () => {
+                clearTimeout(stallTimer);
                 text.innerText = `⚠ ${file.name} failed — skipped`;
                 bar.style.width = "0%";
                 setTimeout(resolve, 1200);
             };
 
+            xhr.onabort = () => {
+                clearTimeout(stallTimer);
+                // ontimeout/stall already set the message — only handle
+                // explicit user-triggered aborts here if we add a cancel
+                // button in future. For now just resolve to unblock queue.
+                resolve();
+            };
+
+            resetStallTimer(); // start timer — covers stall before first progress
             xhr.send(form);
         });
     }

@@ -6,6 +6,7 @@ const dbPath = process.env.INSTBYTE_DATA
   : path.join(__dirname, "../db.sqlite");
 
 const db = new sqlite3.Database(dbPath);
+db.configure("busyTimeout", 5000);
 
 db.serialize(() => {
 

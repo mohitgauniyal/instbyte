@@ -276,10 +276,33 @@ app.post("/logout", (req, res) => {
 app.post("/upload", (req, res) => {
   upload.single("file")(req, res, (err) => {
     if (err && err.code === "LIMIT_FILE_SIZE") {
-      return res.status(413).json({ error: "File exceeds 2GB limit" });
+      // Clean up in case Multer may have written a partial file before hitting limit
+      if (req.file) {
+        const partial = path.join(UPLOADS_DIR, req.file.filename);
+        if (fs.existsSync(partial)) fs.unlinkSync(partial);
+      }
+      return res.status(413).json({ error: "File exceeds limit" });
     }
     if (err) {
+      if (req.file) {
+        const partial = path.join(UPLOADS_DIR, req.file.filename);
+        if (fs.existsSync(partial)) fs.unlinkSync(partial);
+      }
       return res.status(500).json({ error: "Upload failed" });
+    }
+
+    // req.file missing means the request was aborted before Multer
+    // finished. No register or clean up required
+    if (!req.file) {
+      return res.status(400).json({ error: "No file received" });
+    }
+
+    // Detect client disconnect that happened after Multer finished writing
+    // but before we could respond. Clean up the orphaned file.
+    if (req.destroyed || res.destroyed) {
+      const partial = path.join(UPLOADS_DIR, req.file.filename);
+      if (fs.existsSync(partial)) fs.unlinkSync(partial);
+      return;
     }
 
     const { channel, uploader } = req.body;
@@ -297,7 +320,13 @@ app.post("/upload", (req, res) => {
       `INSERT INTO items (type, filename, size, channel, uploader, created_at)
        VALUES (?, ?, ?, ?, ?, ?)`,
       ["file", item.filename, item.size, channel, uploader, item.created_at],
-      function () {
+      function (dbErr) {
+        if (dbErr) {
+          // DB insert failed — don't leave the file on disk orphaned
+          const orphan = path.join(UPLOADS_DIR, item.filename);
+          if (fs.existsSync(orphan)) fs.unlinkSync(orphan);
+          return res.status(500).json({ error: "Failed to save item" });
+        }
         item.id = this.lastID;
         io.emit("new-item", item);
         res.json(item);
