@@ -12,8 +12,8 @@
     "client/"
   ],
   "scripts": {
-    "start": "node server/server.js",
-    "dev": "nodemon server/server.js"
+    "start": "node bin/instbyte.js",
+    "dev": "nodemon bin/instbyte.js"
   },
   "keywords": [
     "lan",

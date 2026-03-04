@@ -116,6 +116,56 @@ Or use any process manager you already have — systemd, screen, tmux.
 
 ---
 
+## Docker
+
+The fastest way to run Instbyte with Docker:
+```bash
+docker compose up -d
+```
+
+Or with plain Docker:
+```bash
+docker run -d \
+  -p 3000:3000 \
+  -v $(pwd)/instbyte-data:/data \
+  -e INSTBYTE_DATA=/data \
+  -e INSTBYTE_UPLOADS=/data/uploads \
+  --name instbyte \
+  mohitgauniyal/instbyte
+```
+
+Data persists in `./instbyte-data` on your host. The same folder used by `npx instbyte` — so switching between the two preserves all your data.
+
+### With a config file
+
+Mount your config file into the container:
+```yaml
+services:
+  instbyte:
+    image: mohitgauniyal/instbyte
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./instbyte-data:/data
+      - ./instbyte.config.json:/app/instbyte.config.json
+    environment:
+      - INSTBYTE_DATA=/data
+      - INSTBYTE_UPLOADS=/data/uploads
+    restart: unless-stopped
+```
+
+### Changing the port
+
+Edit the host port in `docker-compose.yml`:
+```yaml
+ports:
+  - "8080:3000"  # now runs on port 8080
+```
+
+> **Note:** File uploads may not work correctly on Windows Docker Desktop due to network limitations. For Windows, use `npx instbyte` directly or deploy on a Linux server.
+
+---
+
 ## Configuration
 
 Instbyte works out of the box with zero configuration. All options are optional — only include what you want to override.
