@@ -1,0 +1,12 @@
+services:
+  instbyte:
+    image: instbyte
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./instbyte-data:/data
+    environment:
+      - INSTBYTE_DATA=/data
+      - INSTBYTE_UPLOADS=/data/uploads
+    restart: unless-stopped

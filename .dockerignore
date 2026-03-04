@@ -1,0 +1,13 @@
+node_modules
+instbyte-data
+uploads
+.git
+.gitignore
+.npmignore
+*.log
+assets
+README.md
+LICENSE
+db.sqlite
+docker-compose.yml
+.dockerignore

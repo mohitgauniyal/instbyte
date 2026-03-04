@@ -21,6 +21,12 @@ const config = require("./config");
 const UPLOADS_DIR = process.env.INSTBYTE_UPLOADS
   || path.join(__dirname, "../uploads");
 
+// Create the uploads folder if it doesn't exist yet.
+// Needed for Docker — the volume mount replaces anything created during build.
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+
 /* STARTUP ORPHAN SCAN
  Deletes any files in uploads dir that have no matching DB record.
  Catches ghost files left by aborted uploads before fix in v1.9.1 */
@@ -54,7 +60,10 @@ app.use(helmet({
   contentSecurityPolicy: false  // disable CSP for now — it would block CDN scripts
 }));
 
-app.use(express.json());
+app.use((req, res, next) => {
+  if (req.path === '/upload') return next();
+  express.json()(req, res, next);
+});
 app.use(cookieParser());
 app.use(requireAuth);
 app.use("/uploads", express.static(UPLOADS_DIR));
@@ -296,66 +305,57 @@ app.post("/logout", (req, res) => {
 
 
 /* FILE UPLOAD */
-app.post("/upload", (req, res) => {
-  upload.single("file")(req, res, (err) => {
-    if (err && err.code === "LIMIT_FILE_SIZE") {
-      // Clean up in case Multer may have written a partial file before hitting limit
-      if (req.file) {
-        const partial = path.join(UPLOADS_DIR, req.file.filename);
-        if (fs.existsSync(partial)) fs.unlinkSync(partial);
-      }
-      return res.status(413).json({ error: "File exceeds limit" });
-    }
-    if (err) {
-      if (req.file) {
-        const partial = path.join(UPLOADS_DIR, req.file.filename);
-        if (fs.existsSync(partial)) fs.unlinkSync(partial);
-      }
-      return res.status(500).json({ error: "Upload failed" });
-    }
+app.post("/upload", upload.single("file"), (req, res) => {
+  // Guard — no file received
+  if (!req.file) {
+    return res.status(400).json({ error: "No file received" });
+  }
 
-    // req.file missing means the request was aborted before Multer
-    // finished. No register or clean up required
-    if (!req.file) {
-      return res.status(400).json({ error: "No file received" });
-    }
+  // Detect client disconnect after Multer finished writing
+  if (req.destroyed || res.destroyed) {
+    const partial = path.join(UPLOADS_DIR, req.file.filename);
+    if (fs.existsSync(partial)) fs.unlinkSync(partial);
+    return;
+  }
 
-    // Detect client disconnect that happened after Multer finished writing
-    // but before we could respond. Clean up the orphaned file.
-    if (req.destroyed || res.destroyed) {
+  const { channel, uploader } = req.body;
+
+  const item = {
+    type: "file",
+    filename: req.file.filename,
+    size: req.file.size,
+    channel,
+    uploader,
+    created_at: Date.now(),
+  };
+
+  db.run(
+    `INSERT INTO items (type, filename, size, channel, uploader, created_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    ["file", item.filename, item.size, channel, uploader, item.created_at],
+    function (dbErr) {
+      if (dbErr) {
+        const orphan = path.join(UPLOADS_DIR, item.filename);
+        if (fs.existsSync(orphan)) fs.unlinkSync(orphan);
+        return res.status(500).json({ error: "Failed to save item" });
+      }
+      item.id = this.lastID;
+      io.emit("new-item", item);
+      res.json(item);
+    }
+  );
+});
+
+// Multer error handler — catches file size limit and other upload errors
+app.use((err, req, res, next) => {
+  if (err && err.code === "LIMIT_FILE_SIZE") {
+    if (req.file) {
       const partial = path.join(UPLOADS_DIR, req.file.filename);
       if (fs.existsSync(partial)) fs.unlinkSync(partial);
-      return;
     }
-
-    const { channel, uploader } = req.body;
-
-    const item = {
-      type: "file",
-      filename: req.file.filename,
-      size: req.file.size,
-      channel,
-      uploader,
-      created_at: Date.now(),
-    };
-
-    db.run(
-      `INSERT INTO items (type, filename, size, channel, uploader, created_at)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      ["file", item.filename, item.size, channel, uploader, item.created_at],
-      function (dbErr) {
-        if (dbErr) {
-          // DB insert failed — don't leave the file on disk orphaned
-          const orphan = path.join(UPLOADS_DIR, item.filename);
-          if (fs.existsSync(orphan)) fs.unlinkSync(orphan);
-          return res.status(500).json({ error: "Failed to save item" });
-        }
-        item.id = this.lastID;
-        io.emit("new-item", item);
-        res.json(item);
-      }
-    );
-  });
+    return res.status(413).json({ error: "File exceeds limit" });
+  }
+  next(err);
 });
 
 /* TEXT/LINK */
