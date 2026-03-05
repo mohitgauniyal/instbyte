@@ -314,16 +314,8 @@ app.post("/logout", (req, res) => {
 
 /* FILE UPLOAD */
 app.post("/upload", upload.single("file"), (req, res) => {
-  // Guard — no file received
   if (!req.file) {
     return res.status(400).json({ error: "No file received" });
-  }
-
-  // Detect client disconnect after Multer finished writing
-  if (req.destroyed || res.destroyed) {
-    const partial = path.join(UPLOADS_DIR, req.file.filename);
-    if (fs.existsSync(partial)) fs.unlinkSync(partial);
-    return;
   }
 
   const { channel, uploader } = req.body;

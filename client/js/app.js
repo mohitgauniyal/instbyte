@@ -683,7 +683,11 @@ function buildItemEl(i) {
     <div class="preview-panel" id="preview-${i.id}"></div>`;
 
     seenObserver.observe(div);
-    if (typeof lucide !== "undefined") lucide.createIcons({ nodes: [div] });
+    if (typeof lucide !== "undefined") {
+        lucide.createIcons({ nodes: [div] });
+    } else {
+        console.warn("Lucide not yet defined when building item", i.id);
+    }
     return div;
 }
 
@@ -1040,10 +1044,39 @@ async function logout() {
 }
 
 socket.on("new-item", item => {
+    if (document.getElementById("search").value.trim() !== "") return;
+
     if (item.channel === channel) {
+        const container = document.getElementById("items");
+
+        const empty = container.querySelector(".empty-state");
+        if (empty) empty.remove();
+
         if (!item.pinned) newItemIds.add(item.id);
-        load();
+
+        const el = buildItemEl(item);
+
+        if (item.pinned) {
+            container.prepend(el);
+        } else {
+            const existing = container.querySelectorAll(".item");
+            let insertBefore = null;
+            for (let i = 0; i < existing.length; i++) {
+                if (!existing[i].querySelector(".icon-btn.pinned")) {
+                    insertBefore = existing[i];
+                    break;
+                }
+            }
+            if (insertBefore) {
+                container.insertBefore(el, insertBefore);
+            } else {
+                container.appendChild(el);
+            }
+        }
+
+        if (typeof lucide !== "undefined") lucide.createIcons({ nodes: [el] });
         if (item.uploader !== uploader) playChime();
+
     } else if (item.uploader !== uploader) {
         if (!item.pinned) newItemIds.add(item.id);
         unreadChannels.add(item.channel);
@@ -1307,7 +1340,9 @@ async function uploadFiles(files) {
 
     status.style.display = "none";
     fileInput.value = "";
-    load();
+    // Delayed fallback — socket event should have already updated the DOM by now,
+    // but this catches any case where the socket path didn't fire (e.g. network hiccup).
+    setTimeout(() => load(), 500);
 }
 
 
