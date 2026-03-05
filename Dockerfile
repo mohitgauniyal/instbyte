@@ -16,6 +16,9 @@ ENV INSTBYTE_UPLOADS=/data/uploads
 # Create the data dir inside image as fallback
 RUN mkdir -p /data/uploads
 
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD wget -qO- http://localhost:3000/health || exit 1
+
 EXPOSE 3000
 
 # Run the server directly — not via instbyte.js (that's the npx bin)

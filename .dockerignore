@@ -11,3 +11,6 @@ LICENSE
 db.sqlite
 docker-compose.yml
 .dockerignore
+instbyte.config.json
+__tests__
+.github
