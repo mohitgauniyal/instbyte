@@ -2,6 +2,7 @@ require("./cleanup");
 const fs = require("fs");
 const os = require("os");
 const net = require("net");
+const crypto = require("crypto");
 const cookieParser = require("cookie-parser");
 const rateLimit = require("express-rate-limit");
 const helmet = require("helmet");
@@ -154,6 +155,9 @@ function buildPalette(hex) {
 const COOKIE_NAME = "instbyte_auth";
 const COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
 
+// Active sessions — token → true. Cleared on restart, which is intentional.
+const sessions = new Map();
+
 function requireAuth(req, res, next) {
   if (!config.auth.passphrase) return next(); // no passphrase set, skip
 
@@ -161,9 +165,9 @@ function requireAuth(req, res, next) {
   if (req.path === "/login" || req.path === "/info" || req.path === "/health") return next();
 
 
-  // Check cookie
+  // Check cookie holds a valid session token
   const cookie = req.cookies[COOKIE_NAME];
-  if (cookie && cookie === config.auth.passphrase) return next();
+  if (cookie && sessions.has(cookie)) return next();
 
   // Not authenticated
   if (req.path.startsWith("/socket.io")) return next();
@@ -178,7 +182,7 @@ function requireAuth(req, res, next) {
 /* LOGIN PAGE */
 app.get("/login", (req, res) => {
   if (!config.auth.passphrase) return res.redirect("/");
-  if (req.cookies[COOKIE_NAME] === config.auth.passphrase) return res.redirect("/");
+  if (sessions.has(req.cookies[COOKIE_NAME])) return res.redirect("/");
 
   const loginPalette = buildPalette(config.branding.primaryColor);
   const loginBrandingStyle = `
@@ -286,7 +290,9 @@ app.post("/login", loginLimiter, (req, res) => {
 
   const { passphrase } = req.body;
   if (passphrase === config.auth.passphrase) {
-    res.cookie(COOKIE_NAME, passphrase, {
+    const token = crypto.randomBytes(32).toString("hex");
+    sessions.set(token, true);
+    res.cookie(COOKIE_NAME, token, {
       maxAge: COOKIE_MAX_AGE,
       httpOnly: true,
       sameSite: "strict"
@@ -299,6 +305,8 @@ app.post("/login", loginLimiter, (req, res) => {
 
 /* LOGOUT */
 app.post("/logout", (req, res) => {
+  const token = req.cookies[COOKIE_NAME];
+  if (token) sessions.delete(token);
   res.clearCookie(COOKIE_NAME);
   res.redirect("/login");
 });
@@ -374,7 +382,8 @@ app.post("/text", (req, res) => {
     `INSERT INTO items (type, content, channel, uploader, created_at)
      VALUES (?, ?, ?, ?, ?)`,
     ["text", content, channel, uploader, item.created_at],
-    function () {
+    function (err) {
+      if (err) return res.status(500).json({ error: "Failed to save item" });
       item.id = this.lastID;
       io.emit("new-item", item);
       res.json(item);
@@ -395,6 +404,7 @@ app.delete("/item/:id", (req, res) => {
     }
 
     db.run(`DELETE FROM items WHERE id=?`, [id], () => {
+      seenBy.delete(parseInt(id));
       io.emit("delete-item", id);
       res.sendStatus(200);
     });

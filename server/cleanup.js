@@ -11,6 +11,7 @@ setInterval(() => {
     `SELECT * FROM items WHERE created_at < ? AND pinned = 0`,
     [cutoff],
     (err, rows) => {
+      if (err || !rows) return;
       rows.forEach((item) => {
         if (item.filename) {
           const uploadsDir = process.env.INSTBYTE_UPLOADS
