@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  test:
+    name: Syntax & dependency check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Syntax check — server
+        run: |
+          node --check server/server.js
+          node --check server/config.js
+          node --check server/db.js
+          node --check server/cleanup.js
+
+      - name: Syntax check — bin
+        run: node --check bin/instbyte.js

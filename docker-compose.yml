@@ -1,7 +1,8 @@
 services:
   instbyte:
-    image: instbyte
-    build: .
+    image: mohitgauniyal/instbyte:latest
+    # Developers building from source: comment out 'image' above and uncomment below
+    # build: .
     ports:
       - "3000:3000"
     volumes:
