@@ -15,7 +15,7 @@
  *
  *   import { setup, resetDb, getApp, getDb } from '../helpers/setup.js'
  *
- *   setup()   // registers beforeAll / afterAll — call once per file
+ *   setup()   // registers beforeAll / afterAll -- call once per file
  *
  *   beforeEach(async () => {
  *     await resetDb()   // fresh DB state before every test
@@ -28,28 +28,22 @@
  */
 
 import { beforeAll, afterAll } from 'vitest'
-import os from 'os'
-import fs from 'fs'
+import os   from 'os'
+import fs   from 'fs'
 import path from 'path'
 import { createRequire } from 'module'
 
-// createRequire gives us a CommonJS require() from inside this ESM-style
-// Vitest file. All server-side code is CJS so we need this bridge.
 const require = createRequire(import.meta.url)
 
-// ─── State ───────────────────────────────────────────────────────────────────
-
-let _app = null
-let _db = null
+// State
+let _app    = null
+let _db     = null
 let _tmpDir = null
 
 export const getApp = () => _app
-export const getDb = () => _db
+export const getDb  = () => _db
 
-// ─── Schema ──────────────────────────────────────────────────────────────────
-// Full schema matching db.js — including all ALTER TABLE columns.
-// Using DROP + CREATE means resetDb() always starts from a known clean state.
-
+// Schema — mirrors db.js exactly, DROP+CREATE gives a clean slate every time
 const SCHEMA = `
   DROP TABLE IF EXISTS items;
   DROP TABLE IF EXISTS channels;
@@ -75,133 +69,123 @@ const SCHEMA = `
   );
 `
 
-// ─── DB helpers ──────────────────────────────────────────────────────────────
-
 function execSql(db, sql) {
-    return new Promise((resolve, reject) => {
-        db.exec(sql, err => err ? reject(err) : resolve())
-    })
+  return new Promise((resolve, reject) => {
+    db.exec(sql, err => err ? reject(err) : resolve())
+  })
 }
 
 function dbRun(db, sql, params = []) {
-    return new Promise((resolve, reject) => {
-        db.run(sql, params, function (err) {
-            err ? reject(err) : resolve(this)
-        })
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function (err) {
+      err ? reject(err) : resolve(this)
     })
+  })
 }
 
-/**
- * Seed the four default channels that db.js inserts on first boot.
- * Called automatically by resetDb().
- */
 async function seedDefaultChannels(db) {
-    const defaults = ['general', 'projects', 'assets', 'temp']
-    for (const name of defaults) {
-        await dbRun(db, 'INSERT INTO channels (name) VALUES (?)', [name])
-    }
+  const defaults = ['general', 'projects', 'assets', 'temp']
+  for (const name of defaults) {
+    await dbRun(db, 'INSERT INTO channels (name) VALUES (?)', [name])
+  }
 }
 
 /**
- * Wipe all rows and recreate the schema.
- * Call in beforeEach to give every individual test a clean slate.
+ * Wipe all tables, recreate schema, re-seed default channels.
+ * Call in beforeEach to give every test a perfectly clean slate.
  */
 export async function resetDb() {
-    await execSql(_db, SCHEMA)
-    await seedDefaultChannels(_db)
+  await execSql(_db, SCHEMA)
+  await seedDefaultChannels(_db)
 }
 
 /**
- * Convenience: insert a text item directly into the DB.
- * Useful for setting up test state without going through the HTTP layer.
+ * Insert a text item directly into the DB — bypasses HTTP layer.
+ * Useful for setting up preconditions quickly.
  */
 export function insertItem(fields) {
-    const {
-        type = 'text',
-        content = 'test content',
-        filename = null,
-        size = 0,
-        channel = 'general',
-        uploader = 'Tester',
-        pinned = 0,
-        created_at = Date.now()
-    } = fields
+  const {
+    type = 'text',
+    content = 'test content',
+    filename = null,
+    size = 0,
+    channel = 'general',
+    uploader = 'Tester',
+    pinned = 0,
+    created_at = Date.now()
+  } = fields
 
-    return new Promise((resolve, reject) => {
-        _db.run(
-            `INSERT INTO items (type, content, filename, size, channel, uploader, pinned, created_at)
+  return new Promise((resolve, reject) => {
+    _db.run(
+      `INSERT INTO items (type, content, filename, size, channel, uploader, pinned, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            [type, content, filename, size, channel, uploader, pinned, created_at],
-            function (err) { err ? reject(err) : resolve(this.lastID) }
-        )
-    })
+      [type, content, filename, size, channel, uploader, pinned, created_at],
+      function (err) { err ? reject(err) : resolve(this.lastID) }
+    )
+  })
 }
 
 /**
- * Convenience: insert a channel directly into the DB.
+ * Insert a channel directly into the DB.
  */
 export function insertChannel(name, pinned = 0) {
-    return new Promise((resolve, reject) => {
-        _db.run(
-            'INSERT INTO channels (name, pinned) VALUES (?, ?)',
-            [name, pinned],
-            function (err) { err ? reject(err) : resolve(this.lastID) }
-        )
-    })
+  return new Promise((resolve, reject) => {
+    _db.run(
+      'INSERT INTO channels (name, pinned) VALUES (?, ?)',
+      [name, pinned],
+      function (err) { err ? reject(err) : resolve(this.lastID) }
+    )
+  })
 }
 
-// ─── Main setup ──────────────────────────────────────────────────────────────
-
 export function setup() {
-    beforeAll(async () => {
+  beforeAll(async () => {
 
-        // ── Step 1: isolated temp directory ──────────────────────────────────────
-        // Every test run gets its own folder under the OS temp dir.
-        // Nothing ever touches your real instbyte-data/.
-        _tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'instbyte-test-'))
-        const uploadsDir = path.join(_tmpDir, 'uploads')
-        fs.mkdirSync(uploadsDir)
+    // Step 1: isolated temp directory — nothing touches real instbyte-data/
+    _tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'instbyte-test-'))
+    const uploadsDir = path.join(_tmpDir, 'uploads')
+    fs.mkdirSync(uploadsDir)
 
-        // ── Step 2: point db.js at the temp dir ──────────────────────────────────
-        // db.js reads these at require-time, so they must be set before
-        // anything requires db.js or server.js
-        process.env.INSTBYTE_DATA = _tmpDir
-        process.env.INSTBYTE_UPLOADS = uploadsDir
+    // Step 2: point db.js at the temp dir BEFORE requiring anything
+    process.env.INSTBYTE_DATA    = _tmpDir
+    process.env.INSTBYTE_UPLOADS = uploadsDir
 
-        // ── Step 3: stub cleanup.js ───────────────────────────────────────────────
-        // cleanup.js calls setInterval() the moment it's required.
-        // We inject a fake empty module into Node's require cache so that
-        // when server.js does require('./cleanup') it gets nothing instead.
-        const cleanupPath = require.resolve('../../server/cleanup.js')
-        require.cache[cleanupPath] = {
-            id: cleanupPath,
-            filename: cleanupPath,
-            loaded: true,
-            exports: {}      // empty — no setInterval fires
-        }
+    // Step 3: stub cleanup.js so its setInterval never fires during tests
+    const cleanupPath = require.resolve('../../server/cleanup.js')
+    require.cache[cleanupPath] = {
+      id: cleanupPath, filename: cleanupPath, loaded: true, exports: {}
+    }
 
-        // ── Step 4: clear server + db from cache so they re-initialise ───────────
-        // If a previous test file already loaded server.js, it would have used
-        // the old env vars. Clearing the cache forces a fresh require with our
-        // new INSTBYTE_DATA value.
-        const serverPath = require.resolve('../../server/server.js')
-        const dbPath = require.resolve('../../server/db.js')
-        delete require.cache[serverPath]
-        delete require.cache[dbPath]
+    // Step 4: clear server + db from require cache so they reload fresh
+    // with our new env vars (matters if a previous test file loaded them)
+    const serverPath = require.resolve('../../server/server.js')
+    const dbPath     = require.resolve('../../server/db.js')
+    delete require.cache[serverPath]
+    delete require.cache[dbPath]
 
-        // ── Step 5: load the app ─────────────────────────────────────────────────
-        const mod = require('../../server/server.js')
-        _app = mod.app
-        _db = require('../../server/db.js')
+    // Step 5: load the app
+    const mod = require('../../server/server.js')
+    _app = mod.app
+    _db  = require('../../server/db.js')
 
-        // ── Step 6: seed a clean DB for the first test ───────────────────────────
-        await resetDb()
-    })
+    // Step 6: wait for db.js to finish its own async init.
+    // db.js uses db.serialize() which queues CREATE TABLE + INSERT channel
+    // statements asynchronously. We wait for those to land before our first
+    // resetDb() call wipes them — otherwise resetDb() races with the seeding
+    // and causes a UNIQUE constraint error.
+    await new Promise(resolve => setTimeout(resolve, 300))
+  })
 
-    afterAll(() => {
-        // Remove temp dir — uploads, sqlite file, everything
-        if (_tmpDir && fs.existsSync(_tmpDir)) {
-            fs.rmSync(_tmpDir, { recursive: true, force: true })
-        }
-    })
+  afterAll(async () => {
+    // Close the SQLite connection before deleting the temp folder.
+    // On Windows the .sqlite file stays locked until explicitly closed —
+    // fs.rmSync throws EBUSY without this step.
+    if (_db) {
+      await new Promise(resolve => _db.close(() => resolve()))
+    }
+
+    if (_tmpDir && fs.existsSync(_tmpDir)) {
+      fs.rmSync(_tmpDir, { recursive: true, force: true })
+    }
+  })
 }
