@@ -13,7 +13,9 @@
   ],
   "scripts": {
     "start": "node bin/instbyte.js",
-    "dev": "nodemon bin/instbyte.js"
+    "dev": "nodemon bin/instbyte.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "keywords": [
     "lan",
@@ -46,6 +48,8 @@
     "sqlite3": "^5.1.6"
   },
   "devDependencies": {
-    "nodemon": "^3.1.0"
+    "nodemon": "^3.1.0",
+    "supertest": "^7.2.2",
+    "vitest": "^4.0.18"
   }
 }

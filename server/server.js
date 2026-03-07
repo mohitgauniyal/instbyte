@@ -823,19 +823,23 @@ const localIP = getLocalIP();
 
 let PORT;
 
-findFreePort(PREFERRED).then(p => {
-  PORT = p;
-  server.listen(PORT, () => {
-    console.log("\nInstbyte running");
-    console.log("Local:   http://localhost:" + PORT);
-    console.log("Network: http://" + localIP + ":" + PORT);
-    if (PORT !== PREFERRED) {
-      console.log(`(port ${PREFERRED} was busy, switched to ${PORT})`);
-    }
-    console.log("");
-    scanOrphans(); // clean up any pre-v1.9.1 ghost files
+if (require.main === module) {
+  findFreePort(PREFERRED).then(p => {
+    PORT = p;
+    server.listen(PORT, () => {
+      console.log("\nInstbyte running");
+      console.log("Local:   http://localhost:" + PORT);
+      console.log("Network: http://" + localIP + ":" + PORT);
+      if (PORT !== PREFERRED) {
+        console.log(`(port ${PREFERRED} was busy, switched to ${PORT})`);
+      }
+      console.log("");
+      scanOrphans();
+    });
   });
-});
+}
+
+module.exports = { app, server };
 
 
 // ========================

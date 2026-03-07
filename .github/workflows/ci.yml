@@ -32,3 +32,6 @@ jobs:
 
       - name: Syntax check — bin
         run: node --check bin/instbyte.js
+      
+      - name: Run tests
+        run: npm test
