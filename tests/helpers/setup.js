@@ -43,7 +43,7 @@ let _tmpDir = null
 export const getApp = () => _app
 export const getDb  = () => _db
 
-// Schema — mirrors db.js exactly, DROP+CREATE gives a clean slate every time
+// Schema -- mirrors db.js exactly, DROP+CREATE gives a clean slate every time
 const SCHEMA = `
   DROP TABLE IF EXISTS items;
   DROP TABLE IF EXISTS channels;
@@ -83,11 +83,37 @@ function dbRun(db, sql, params = []) {
   })
 }
 
+function dbGet(db, sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.get(sql, params, (err, row) => err ? reject(err) : resolve(row))
+  })
+}
+
 async function seedDefaultChannels(db) {
   const defaults = ['general', 'projects', 'assets', 'temp']
   for (const name of defaults) {
     await dbRun(db, 'INSERT INTO channels (name) VALUES (?)', [name])
   }
+}
+
+/**
+ * Wait until db.js has finished its own async initialisation.
+ * db.js uses db.serialize() to queue CREATE TABLE + INSERT channel statements.
+ * We poll until those statements have landed rather than using a fixed timeout,
+ * which makes this reliable across machines of different speeds (Windows, Linux CI).
+ */
+async function waitForDbReady(db, maxWaitMs = 5000) {
+  const start = Date.now()
+  while (Date.now() - start < maxWaitMs) {
+    try {
+      const row = await dbGet(db, "SELECT COUNT(*) as count FROM channels")
+      if (row && row.count >= 4) return  // default channels are seeded, ready
+    } catch (e) {
+      // table may not exist yet -- keep waiting
+    }
+    await new Promise(resolve => setTimeout(resolve, 20))
+  }
+  throw new Error('DB did not become ready within ' + maxWaitMs + 'ms')
 }
 
 /**
@@ -100,7 +126,7 @@ export async function resetDb() {
 }
 
 /**
- * Insert a text item directly into the DB — bypasses HTTP layer.
+ * Insert a text item directly into the DB -- bypasses HTTP layer.
  * Useful for setting up preconditions quickly.
  */
 export function insertItem(fields) {
@@ -141,7 +167,7 @@ export function insertChannel(name, pinned = 0) {
 export function setup() {
   beforeAll(async () => {
 
-    // Step 1: isolated temp directory — nothing touches real instbyte-data/
+    // Step 1: isolated temp directory -- nothing touches real instbyte-data/
     _tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'instbyte-test-'))
     const uploadsDir = path.join(_tmpDir, 'uploads')
     fs.mkdirSync(uploadsDir)
@@ -168,17 +194,16 @@ export function setup() {
     _app = mod.app
     _db  = require('../../server/db.js')
 
-    // Step 6: wait for db.js to finish its own async init.
+    // Step 6: wait for db.js to finish its own async init by polling.
     // db.js uses db.serialize() which queues CREATE TABLE + INSERT channel
-    // statements asynchronously. We wait for those to land before our first
-    // resetDb() call wipes them — otherwise resetDb() races with the seeding
-    // and causes a UNIQUE constraint error.
-    await new Promise(resolve => setTimeout(resolve, 300))
+    // statements asynchronously. We poll until the channels exist rather than
+    // using a fixed timeout -- this is reliable across Windows and Linux CI.
+    await waitForDbReady(_db)
   })
 
   afterAll(async () => {
     // Close the SQLite connection before deleting the temp folder.
-    // On Windows the .sqlite file stays locked until explicitly closed —
+    // On Windows the .sqlite file stays locked until explicitly closed --
     // fs.rmSync throws EBUSY without this step.
     if (_db) {
       await new Promise(resolve => _db.close(() => resolve()))
