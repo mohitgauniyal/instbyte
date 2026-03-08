@@ -772,6 +772,37 @@ app.get("/branding", (req, res) => {
   });
 });
 
+/* PWA MANIFEST */
+app.get("/manifest.json", (req, res) => {
+  const b = config.branding;
+  const name = b.appName || "Instbyte";
+  const color = b.primaryColor || "#111827";
+
+  res.json({
+    name,
+    short_name: name.length > 12 ? name.slice(0, 12) : name,
+    description: "Real-time LAN sharing — no cloud, no accounts",
+    start_url: "/",
+    display: "standalone",
+    background_color: "#f3f4f6",
+    theme_color: color,
+    icons: [
+      {
+        src: "/logo-dynamic.png",
+        sizes: "192x192",
+        type: "image/png",
+        purpose: "any maskable"
+      },
+      {
+        src: "/logo-dynamic.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "any maskable"
+      }
+    ]
+  });
+});
+
 /* HEALTH MONITOR */
 app.get("/health", (req, res) => {
   res.json({

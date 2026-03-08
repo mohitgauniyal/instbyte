@@ -5,6 +5,8 @@
   <title>Instbyte</title>
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-dynamic.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-dynamic.png">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" id="themeColorMeta" content="#111827">
   <meta name="viewport" content="width=device-width,initial-scale=1">
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
@@ -89,7 +91,11 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
   <script src="/js/app.js?v=1.9.1.2"></script>
 
-
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => { });
+    }
+  </script>
 </body>
 
 </html>

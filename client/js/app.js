@@ -116,6 +116,9 @@ async function applyBranding() {
         root.style.setProperty("--color-secondary-light", p.secondaryLight);
         root.style.setProperty("--color-on-secondary", p.onSecondary);
 
+        const themeMeta = document.getElementById('themeColorMeta');
+        if (themeMeta) themeMeta.setAttribute('content', p.primary);
+
     } catch (e) {
         // Branding failed — default styles remain, no crash
     }
