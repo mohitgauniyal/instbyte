@@ -1331,6 +1331,7 @@ async function uploadFiles(files) {
                     setTimeout(resolve, 1200);
                     return;
                 }
+                if (navigator.vibrate) navigator.vibrate([50]);
                 resolve();
             };
 
