@@ -284,6 +284,20 @@ const loginLimiter = rateLimit({
   message: { error: "Too many attempts, try again later" }
 });
 
+const dropLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 60,
+  skip: () => process.env.NODE_ENV === 'test',
+  message: { error: "Too many requests,  try again later" }
+});
+
+const channelLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 20,
+  skip: () => process.env.NODE_ENV === 'test',
+  message: { error: "Too many requests,  try again later" }
+});
+
 /* LOGIN POST */
 app.post("/login", loginLimiter, (req, res) => {
   if (!config.auth.passphrase) return res.redirect("/");
@@ -313,7 +327,7 @@ app.post("/logout", (req, res) => {
 
 
 /* FILE UPLOAD */
-app.post("/upload", upload.single("file"), (req, res) => {
+app.post("/upload", dropLimiter, upload.single("file"), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: "No file received" });
   }
@@ -359,7 +373,7 @@ app.use((err, req, res, next) => {
 });
 
 /* TEXT/LINK */
-app.post("/text", (req, res) => {
+app.post("/text", dropLimiter, (req, res) => {
   const { content, channel, uploader } = req.body;
 
   const item = {
@@ -496,7 +510,7 @@ app.get("/channels", (req, res) => {
 });
 
 /* ADD CHANNEL */
-app.post("/channels", (req, res) => {
+app.post("/channels", channelLimiter, (req, res) => {
 
   const { name } = req.body;
   if (!name) return res.status(400).json({ error: "Name required" });
