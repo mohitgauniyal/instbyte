@@ -308,6 +308,11 @@ The difference between *a tool you use* and *a tool you own.*
 **Read receipts** — see how many devices have viewed each shared item. Updates live as teammates open the page.
 
 **Item management** — add optional titles to label any item for future reference. Edit text items inline without deleting and re-pasting. Pinned items are protected from both manual deletion and auto-cleanup.
+
+**Mobile ready** — install as a PWA directly from your browser. Add to Home Screen on iOS or Android for a native app feel without the App Store.
+
+**Security hardened** — rate limiting on all write endpoints, magic number file validation, filename sanitisation, and forced download for executable file types.
+
 ---
 
 ## Keyboard Shortcuts
@@ -335,10 +340,46 @@ node server/server.js
 
 ## Use Cases
 
-- Moving content between your phone and laptop over WiFi
+- Moving content between your phone and laptop, or just any device over WiFi
 - Sharing API payloads, logs, or screenshots during a sprint
 - A lightweight team clipboard during standups or pair sessions
 - Home lab file sharing without setting up NAS or cloud sync
+- Piping build logs or stack traces from CI or terminal directly into a shared channel
+- Sharing sensitive credentials or config files over LAN without leaving a cloud trail
+
+---
+
+## Terminal Usage
+
+Since Instbyte exposes a simple HTTP API, you can push content directly from your terminal using `curl` — no browser needed.
+
+**Send a log file:**
+```bash
+curl -X POST http://192.168.x.x:3000/text \
+  -H "Content-Type: application/json" \
+  -d "{\"content\": \"$(cat error.log)\", \"channel\": \"general\", \"uploader\": \"terminal\"}"
+```
+
+**Pipe command output directly:**
+```bash
+npm run build 2>&1 | curl -X POST http://192.168.x.x:3000/text \
+  -H "Content-Type: application/json" \
+  --data-binary @-  \
+  -H "X-Channel: general" \
+  -H "X-Uploader: CI"
+```
+
+**Upload a file from the terminal:**
+```bash
+curl -X POST http://192.168.x.x:3000/upload \
+  -F "file=@./build.log" \
+  -F "channel=general" \
+  -F "uploader=terminal"
+```
+
+Replace `192.168.x.x:3000` with the URL shown when Instbyte starts. If auth is enabled, add `-b "instbyte_auth=your-token"` to each request.
+
+Useful for piping stack traces, build logs, or environment dumps straight into a channel your whole team can see instantly.
 
 ---
 
@@ -351,6 +392,8 @@ Instbyte follows [Semantic Versioning](https://semver.org). See [Releases](https
 ## Contributing
 
 Instbyte is intentionally lightweight and LAN-first. If you want to extend it — CLI tools, themes, integrations — open an issue or submit a pull request.
+
+The codebase has a full test suite (184 tests across unit and integration). Run `npm test` before submitting anything. Issues tagged **good first issue** are a good starting point.
 
 ---
 
