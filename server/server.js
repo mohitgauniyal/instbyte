@@ -67,7 +67,14 @@ app.use((req, res, next) => {
 });
 app.use(cookieParser());
 app.use(requireAuth);
-app.use("/uploads", express.static(UPLOADS_DIR));
+app.use("/uploads", (req, res, next) => {
+  const ext = req.path.split('.').pop().toLowerCase();
+  if (FORCE_DOWNLOAD_EXTENSIONS.has(ext)) {
+    const filename = path.basename(req.path);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  }
+  next();
+}, express.static(UPLOADS_DIR));
 app.use(express.static(CLIENT_DIR));
 
 const storage = multer.diskStorage({
@@ -75,7 +82,8 @@ const storage = multer.diskStorage({
     cb(null, UPLOADS_DIR);
   },
   filename: (req, file, cb) => {
-    const unique = Date.now() + "-" + file.originalname;
+    const safe = sanitiseFilename(file.originalname);
+    const unique = Date.now() + "-" + safe;
     cb(null, unique);
   },
 });
@@ -85,6 +93,64 @@ const upload = multer({
   limits: { fileSize: config.storage.maxFileSize },
 });
 
+// FILE SECURITY
+
+// Extensions that must never be rendered inline by a browser.
+// These are served with Content-Disposition: attachment always.
+const FORCE_DOWNLOAD_EXTENSIONS = new Set([
+  'svg', 'html', 'htm', 'xml', 'xhtml', 'js', 'mjs', 'php',
+  'sh', 'bash', 'py', 'rb', 'pl', 'ps1', 'bat', 'cmd', 'exe',
+  'dll', 'jar', 'vbs', 'ws', 'hta'
+]);
+
+// Magic number signatures — first bytes that identify real file types.
+// Key = expected extension group, value = array of valid byte signatures.
+const MAGIC_NUMBERS = {
+  jpg: [Buffer.from([0xFF, 0xD8, 0xFF])],
+  png: [Buffer.from([0x89, 0x50, 0x4E, 0x47])],
+  gif: [Buffer.from([0x47, 0x49, 0x46, 0x38])],
+  webp: [Buffer.from([0x52, 0x49, 0x46, 0x46])],
+  pdf: [Buffer.from([0x25, 0x50, 0x44, 0x46])],
+  zip: [Buffer.from([0x50, 0x4B, 0x03, 0x04]), Buffer.from([0x50, 0x4B, 0x05, 0x06])],
+  mp4: [Buffer.from([0x00, 0x00, 0x00, 0x18]), Buffer.from([0x00, 0x00, 0x00, 0x20])],
+};
+
+// Extension → magic group mapping
+const EXT_TO_MAGIC = {
+  jpg: 'jpg', jpeg: 'jpg',
+  png: 'png',
+  gif: 'gif',
+  webp: 'webp',
+  pdf: 'pdf',
+  zip: 'zip',
+  mp4: 'mp4',
+};
+
+function sanitiseFilename(name) {
+  return name
+    .replace(/[/\\?%*:|"<>\x00]/g, '_')  // strip path separators and dangerous chars
+    .replace(/\.{2,}/g, '.')              // collapse .. sequences
+    .trim()
+    .slice(0, 255);                        // max filename length
+}
+
+function checkMagicNumber(filePath, ext) {
+  const group = EXT_TO_MAGIC[ext.toLowerCase()];
+  if (!group) return true; // no check defined for this type — allow through
+
+  const signatures = MAGIC_NUMBERS[group];
+  if (!signatures) return true;
+
+  try {
+    const fd = fs.openSync(filePath, 'r');
+    const buf = Buffer.alloc(8);
+    fs.readSync(fd, buf, 0, 8, 0);
+    fs.closeSync(fd);
+    return signatures.some(sig => buf.slice(0, sig.length).equals(sig));
+  } catch (e) {
+    return false; // can't read → reject
+  }
+}
 
 function hexToHsl(hex) {
   let r = parseInt(hex.slice(1, 3), 16) / 255;
@@ -330,6 +396,14 @@ app.post("/logout", (req, res) => {
 app.post("/upload", dropLimiter, upload.single("file"), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: "No file received" });
+  }
+
+  // Magic number check — verify file content matches its extension
+  const ext = req.file.originalname.split('.').pop().toLowerCase();
+  const filePath = path.join(UPLOADS_DIR, req.file.filename);
+  if (!checkMagicNumber(filePath, ext)) {
+    fs.unlinkSync(filePath); // delete the suspicious file immediately
+    return res.status(400).json({ error: "File content does not match its extension" });
   }
 
   const { channel, uploader } = req.body;
