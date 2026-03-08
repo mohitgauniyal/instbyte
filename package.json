@@ -1,6 +1,6 @@
 {
   "name": "instbyte",
-  "version": "1.9.3",
+  "version": "1.9.4",
   "description": "A self-hosted LAN sharing utility for fast, frictionless file, link, and snippet exchange across devices — no cloud required.",
   "main": "bin/instbyte.js",
   "bin": {
