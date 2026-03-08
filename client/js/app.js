@@ -213,18 +213,30 @@ function renderText(text) {
     if (!text) return "";
     if (looksLikeMarkdown(text)) {
         const html = marked.parse(text);
-        // highlight code blocks after parse
         const wrap = document.createElement("div");
         wrap.innerHTML = html;
         wrap.querySelectorAll("pre code").forEach(el => hljs.highlightElement(el));
         return `<div class="markdown-body">${wrap.innerHTML}</div>`;
     }
-    // plain text — just escape and preserve newlines
-    return text
+    // plain text — escape and preserve newlines
+    const escaped = text
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
         .replace(/\n/g, "<br>");
+
+    // collapse long plain text (more than 8 newlines)
+    const lineCount = (text.match(/\n/g) || []).length;
+    if (lineCount > 8) {
+        const id = 'expand-' + Math.random().toString(36).slice(2, 8);
+        return `<div class="item-text-collapsed" id="${id}">${escaped}</div>
+<button class="item-text-expand-btn" onclick="
+    document.getElementById('${id}').classList.remove('item-text-collapsed');
+    this.remove();
+">Show more</button>`;
+    }
+
+    return escaped;
 }
 
 const TEXT_EXTENSIONS = [
@@ -455,6 +467,7 @@ function toggleMoveDropdown(e, id, currentChannel) {
 
     dropdown.classList.add("open");
     openDropdown = dropdown;
+    if (window.innerWidth <= 640) openBottomSheet(dropdown);
 }
 
 function toggleMoreMenu(e, id, currentChannel) {
@@ -1479,21 +1492,27 @@ function showChannelMenu(e, ch) {
     </button>
   `;
 
-    menu.style.top = e.clientY + "px";
-    menu.style.left = e.clientX + "px";
-    menu.classList.add("open");
-
-    requestAnimationFrame(() => {
-        const rect = menu.getBoundingClientRect();
-        if (rect.right > window.innerWidth - 8)
-            menu.style.left = (e.clientX - rect.width) + "px";
-        if (rect.bottom > window.innerHeight - 8)
-            menu.style.top = (e.clientY - rect.height) + "px";
-    });
+    if (window.innerWidth <= 640) {
+        // mobile — bottom sheet, no positioning needed
+        menu.classList.add("open");
+        openBottomSheet(menu);
+    } else {
+        // desktop — position by click coordinates
+        menu.style.top = e.clientY + "px";
+        menu.style.left = e.clientX + "px";
+        menu.classList.add("open");
+        requestAnimationFrame(() => {
+            const rect = menu.getBoundingClientRect();
+            if (rect.right > window.innerWidth - 8)
+                menu.style.left = (e.clientX - rect.width) + "px";
+            if (rect.bottom > window.innerHeight - 8)
+                menu.style.top = (e.clientY - rect.height) + "px";
+        });
+    }
 }
 
 document.addEventListener("click", () => {
-    document.getElementById("channelMenu").classList.remove("open");
+    closeAllBottomSheets();
 });
 
 document.addEventListener("contextmenu", (e) => {
@@ -1637,6 +1656,27 @@ document.addEventListener("keydown", e => {
     if (isTyping) return;
 
 });
+
+// Create shared backdrop for bottom sheets
+const bottomSheetBackdrop = document.createElement('div');
+bottomSheetBackdrop.className = 'bottom-sheet-backdrop';
+document.body.appendChild(bottomSheetBackdrop);
+
+function openBottomSheet(el) {
+    bottomSheetBackdrop.classList.add('open');
+    bottomSheetBackdrop.onclick = () => closeAllBottomSheets();
+}
+
+function closeAllBottomSheets() {
+    bottomSheetBackdrop.classList.remove('open');
+    // close context menu
+    document.getElementById('channelMenu').classList.remove('open');
+    // close any open move dropdown
+    if (openDropdown) {
+        openDropdown.classList.remove('open');
+        openDropdown = null;
+    }
+}
 
 (async function init() {
     await applyBranding();

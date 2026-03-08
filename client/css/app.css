@@ -651,6 +651,38 @@ input[type=text]:focus {
     padding-left: 20px;
 }
 
+.item-text-collapsed {
+    position: relative;
+    max-height: 9em;
+    overflow: hidden;
+}
+
+.item-text-collapsed::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3em;
+    background: linear-gradient(to bottom, transparent, #ffffff);
+    pointer-events: none;
+}
+
+.item-text-expand-btn {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--color-secondary);
+    background: none;
+    border: none;
+    padding: 2px 0;
+    cursor: pointer;
+    text-align: left;
+}
+
+.item-text-expand-btn:hover {
+    color: var(--color-primary);
+}
 
 /* ============================================================
    PREVIEW PANEL
@@ -1174,6 +1206,122 @@ input[type=text]:focus {
         padding: 6px 12px;
         font-size: 12px;
     }
+
+    /* Backdrop */
+    .bottom-sheet-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.4);
+        z-index: 9998;
+        display: none;
+        animation: fadeInBackdrop 0.2s ease;
+    }
+
+    .bottom-sheet-backdrop.open {
+        display: block;
+    }
+
+    @keyframes fadeInBackdrop {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+
+    /* Context menu becomes a bottom sheet */
+    .context-menu {
+        position: fixed;
+        top: auto !important;
+        left: 0 !important;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        max-width: 100%;
+        border-radius: 16px 16px 0 0;
+        padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+        z-index: 9999;
+        animation: slideUpSheet 0.25s ease;
+        box-sizing: border-box;
+    }
+
+    /* Drag handle */
+    .context-menu::before {
+        content: "";
+        display: block;
+        width: 36px;
+        height: 4px;
+        background: #d1d5db;
+        border-radius: 2px;
+        margin: 0 auto 10px;
+    }
+
+    .context-menu button {
+        padding: 14px 20px;
+        font-size: 15px;
+        border-radius: 0;
+    }
+
+    /* Move dropdown becomes a bottom sheet */
+    .move-dropdown {
+        position: fixed !important;
+        top: auto !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
+        min-width: 100% !important;
+        border-radius: 16px 16px 0 0;
+        padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+        z-index: 9999;
+        animation: slideUpSheet 0.25s ease;
+        box-sizing: border-box;
+    }
+
+    .move-dropdown::before {
+        content: "";
+        display: block;
+        width: 36px;
+        height: 4px;
+        background: #d1d5db;
+        border-radius: 2px;
+        margin: 0 auto 10px;
+    }
+
+    .move-dropdown button {
+        padding: 14px 20px;
+        font-size: 15px;
+        border-radius: 0;
+    }
+
+    .move-dropdown .dropdown-label {
+        padding: 8px 20px 6px;
+        font-size: 12px;
+    }
+
+    .preview-panel pre {
+        overflow-x: scroll;
+        -webkit-overflow-scrolling: touch;
+        max-height: 300px;
+        font-size: 11px;
+    }
+
+    .markdown-body pre {
+        overflow-x: scroll;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    @keyframes slideUpSheet {
+        from {
+            transform: translateY(100%);
+        }
+
+        to {
+            transform: translateY(0);
+        }
+    }
 }
 
 
@@ -1572,6 +1720,10 @@ input[type=text]:focus {
             background: #052e16;
         }
 
+        .item-text-collapsed::after {
+            background: linear-gradient(to bottom, transparent, #1e2433);
+        }
+
         #uploadStatus {
             background: #1a1d27 !important;
             color: #e5e7eb !important;
@@ -1964,6 +2116,10 @@ input[type=text]:focus {
         border-left: 3px solid #16a34a;
         padding-left: 13px;
         background: #052e16;
+    }
+
+    .item-text-collapsed::after {
+        background: linear-gradient(to bottom, transparent, #1e2433);
     }
 
     #uploadStatus {
