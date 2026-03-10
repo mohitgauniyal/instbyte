@@ -37,6 +37,33 @@
     </div>
   </header>
 
+  <div id="broadcastBar" class="broadcast-bar" style="display:none">
+    <div class="broadcast-bar-inner">
+      <span class="broadcast-pulse"></span>
+      <span id="broadcastLabel">Someone is broadcasting</span>
+      <span id="broadcastViewers" class="broadcast-viewers"></span>
+      <div class="broadcast-bar-actions">
+        <button id="broadcastJoinBtn" class="broadcast-join-btn" onclick="joinBroadcast()">Join</button>
+        <button id="broadcastEndBtn" class="broadcast-end-btn" onclick="stopBroadcast()" style="display:none">End
+          broadcast</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="viewerPanel" class="viewer-panel" style="display:none">
+    <div class="viewer-panel-header">
+      <span id="viewerLabel">Broadcast</span>
+      <div class="viewer-panel-actions">
+        <button onclick="captureToChannel()" class="viewer-capture-btn" title="Save frame to channel">📸
+          Capture</button>
+        <button onclick="raiseHand()" class="viewer-raise-btn" title="Raise hand">✋</button>
+        <button onclick="leaveBroadcast()" class="viewer-close-btn" title="Leave broadcast">✕</button>
+      </div>
+    </div>
+    <img id="viewerFrame" class="viewer-frame" src="" alt="Waiting for broadcast...">
+    <div id="filmstrip" class="filmstrip"></div>
+  </div>
+
   <div class="container">
     <div class="channel-bar">
       <div class="channels" id="channels"></div>
@@ -49,6 +76,9 @@
       <button onclick="sendText()">Send</button>
       <input type="file" id="fileInput" hidden multiple>
       <button onclick="fileInput.click()">Upload</button>
+      <button id="startBroadcastBtn" onclick="startBroadcast()" class="broadcast-start-btn"
+        title="Start broadcasting your screen">📡 Broadcast</button>
+
     </div>
     <div class="drop" id="drop">Drag files anywhere to upload</div>
     <div id="uploadStatus"
