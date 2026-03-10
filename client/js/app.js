@@ -1860,6 +1860,13 @@ function joinBroadcast() {
     label.textContent = `${document.getElementById('broadcastLabel').textContent}`;
     panel.style.display = 'flex';
 
+    // Reset position to default top-right on each join
+    panel.style.left = '';
+    panel.style.top = '';
+    panel.style.right = '20px';
+
+    makeDraggable(panel);
+
     // Tell server we joined — get last frame immediately
     socket.emit('broadcast-join');
 }
@@ -1915,6 +1922,61 @@ function showBroadcastSecureWarning() {
         bar.style.display = 'none';
         label.textContent = 'Someone is broadcasting';
     }, 6000);
+}
+
+function toggleMinimize() {
+    const panel = document.getElementById('viewerPanel');
+    if (!panel) return;
+    panel.classList.toggle('minimized');
+}
+
+function makeDraggable(panel) {
+    const header = panel.querySelector('.viewer-panel-header');
+    if (!header) return;
+
+    let isDragging = false;
+    let startX, startY, startLeft, startTop;
+
+    header.addEventListener('mousedown', (e) => {
+        // Don't drag if clicking a button
+        if (e.target.tagName === 'BUTTON') return;
+
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+
+        const rect = panel.getBoundingClientRect();
+        startLeft = rect.left;
+        startTop = rect.top;
+
+        // Switch from right-anchored to left-anchored positioning
+        panel.style.right = 'auto';
+        panel.style.left = startLeft + 'px';
+        panel.style.top = startTop + 'px';
+
+        e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+
+        let newLeft = startLeft + dx;
+        let newTop = startTop + dy;
+
+        // Keep within viewport
+        newLeft = Math.max(0, Math.min(newLeft, window.innerWidth - panel.offsetWidth));
+        newTop = Math.max(0, Math.min(newTop, window.innerHeight - panel.offsetHeight));
+
+        panel.style.left = newLeft + 'px';
+        panel.style.top = newTop + 'px';
+    });
+
+    document.addEventListener('mouseup', () => {
+        isDragging = false;
+    });
 }
 
 // ─── SOCKET LISTENERS ────────────────────────────────────────

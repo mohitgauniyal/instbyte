@@ -1223,6 +1223,40 @@ input[type=text]:focus {
     background: #f9fafb;
     border-bottom: 1px solid #e5e7eb;
     flex-shrink: 0;
+    cursor: grab;
+    user-select: none;
+}
+
+.viewer-panel-header:active {
+    cursor: grabbing;
+}
+
+.viewer-minimize-btn {
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    color: #374151;
+}
+
+.viewer-minimize-btn:hover {
+    background: #fef9c3;
+    border-color: #fde68a;
+    color: #92400e;
+}
+
+.viewer-panel.minimized .viewer-frame,
+.viewer-panel.minimized .viewer-panel-actions .viewer-capture-btn,
+.viewer-panel.minimized .viewer-panel-actions .viewer-raise-btn,
+.viewer-panel.minimized .viewer-panel-actions .viewer-close-btn {
+    display: none;
+}
+
+.viewer-panel.minimized {
+    min-height: unset;
+    resize: none;
 }
 
 #viewerLabel {
