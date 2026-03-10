@@ -364,6 +364,13 @@ const channelLimiter = rateLimit({
   message: { error: "Too many requests,  try again later" }
 });
 
+const broadcastLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  skip: () => process.env.NODE_ENV === 'test',
+  message: { error: "Too many broadcast attempts, slow down" }
+});
+
 /* LOGIN POST */
 app.post("/login", loginLimiter, (req, res) => {
   if (!config.auth.passphrase) return res.redirect("/");
@@ -812,6 +819,60 @@ app.get("/health", (req, res) => {
   });
 });
 
+/*   BROADCAST*/
+/* GET /broadcast/status — returns current broadcast or null */
+app.get("/broadcast/status", (req, res) => {
+  if (!currentBroadcast) return res.json({ live: false });
+  res.json({
+    live: true,
+    uploader: currentBroadcast.uploader,
+    channel: currentBroadcast.channel,
+    startedAt: currentBroadcast.startedAt
+  });
+});
+
+/* POST /broadcast/start */
+app.post("/broadcast/start", broadcastLimiter, (req, res) => {
+  if (currentBroadcast) {
+    return res.status(409).json({
+      error: "Broadcast already in progress",
+      uploader: currentBroadcast.uploader
+    });
+  }
+
+  const { uploader, channel } = req.body;
+  if (!uploader || !channel) {
+    return res.status(400).json({ error: "uploader and channel required" });
+  }
+
+  currentBroadcast = {
+    uploader,
+    channel,
+    startedAt: Date.now(),
+    lastFrame: null
+  };
+
+  io.emit("broadcast-started", {
+    uploader: currentBroadcast.uploader,
+    channel: currentBroadcast.channel,
+    startedAt: currentBroadcast.startedAt
+  });
+
+  console.log(`Broadcast started by ${uploader}`);
+  res.json({ ok: true, ...currentBroadcast });
+});
+
+/* POST /broadcast/end */
+app.post("/broadcast/end", (req, res) => {
+  if (!currentBroadcast) return res.status(400).json({ error: "No broadcast in progress" });
+
+  const uploader = currentBroadcast.uploader;
+  currentBroadcast = null;
+
+  io.emit("broadcast-ended", { uploader });
+  console.log(`Broadcast ended by ${uploader}`);
+  res.json({ ok: true });
+});
 
 /* FAVICON */
 app.get("/favicon-dynamic.png", async (req, res) => {
@@ -867,6 +928,9 @@ app.get("/logo-dynamic.png", (req, res) => {
 // resets on server restart, no DB needed
 const seenBy = new Map();
 
+// Broadcast state — null when IDLE, populated when LIVE
+let currentBroadcast = null;
+
 let connectedUsers = 0;
 
 io.on("connection", (socket) => {
@@ -887,6 +951,27 @@ io.on("connection", (socket) => {
     const count = seenBy.get(id).size;
     console.log(`seen: item ${id} | count: ${count}`);
     io.emit("seen-update", { id, count });
+  });
+
+  // Broadcast — frame relay
+  socket.on("broadcast-frame", (data) => {
+    if (!currentBroadcast) return;
+    currentBroadcast.lastFrame = data.frame;
+    // relay to everyone except the sender
+    socket.broadcast.emit("broadcast-frame", { frame: data.frame });
+  });
+
+  // Broadcast — viewer joins, send last frame immediately
+  socket.on("broadcast-join", () => {
+    if (!currentBroadcast || !currentBroadcast.lastFrame) return;
+    socket.emit("broadcast-frame", { frame: currentBroadcast.lastFrame });
+  });
+
+  // Broadcast — raise hand, relay only to broadcaster
+  socket.on("broadcast-reaction", ({ from }) => {
+    if (!currentBroadcast) return;
+    // find broadcaster's socket and emit only to them
+    io.emit("broadcast-reaction-received", { from });
   });
 
   socket.on("disconnect", () => {
