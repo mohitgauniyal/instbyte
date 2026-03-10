@@ -10,16 +10,12 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import request from 'supertest'
 import { setup, resetDb, getApp } from '../helpers/setup.js'
-import { createRequire } from 'module'
-
-const require = createRequire(import.meta.url)
 
 setup()
 
 beforeEach(async () => {
     await resetDb()
     // reset broadcast state between tests
-    const mod = require('../../server/server.js')
     // access and clear currentBroadcast via the end endpoint
     // if a broadcast is live from a previous test, end it cleanly
     await request(getApp()).post('/broadcast/end')

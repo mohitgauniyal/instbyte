@@ -6,6 +6,16 @@ let retention = 24 * 60 * 60 * 1000; // default 24h, overwritten on init
 const newItemIds = new Set();
 const seenEmitted = new Set(); // item IDs this session has already emitted seen for
 
+// BROADCAST STATE
+let isBroadcasting = false;
+let broadcastStream = null;
+let broadcastCanvas = null;
+let broadcastCtx = null;
+let broadcastInterval = null;
+let lastFrameData = null;
+let broadcastChannel = 'general';
+let viewerCount = 0;
+
 const seenObserver = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
         if (!entry.isIntersecting) return;
@@ -1271,7 +1281,7 @@ document.addEventListener("paste", async e => {
     });
 });
 
-async function uploadFiles(files) {
+async function uploadFiles(files, overrideChannel) {
     if (!files || !files.length) return;
 
     const status = document.getElementById("uploadStatus");
@@ -1279,7 +1289,7 @@ async function uploadFiles(files) {
     const text = document.getElementById("uploadText");
 
     const total = files.length;
-    const targetChannel = channel; // capture at start, won't change if user switches
+    const targetChannel = overrideChannel || channel; // capture at start, won't change if user switches
 
     for (let i = 0; i < total; i++) {
         const file = files[i];
@@ -1679,6 +1689,287 @@ function closeAllBottomSheets() {
     }
 }
 
+// ============================================================
+// BROADCAST
+// ============================================================
+
+async function startBroadcast() {
+    // Check secure context first
+    if (!window.isSecureContext) {
+        showBroadcastSecureWarning();
+        return;
+    }
+
+    // Check if someone else is already broadcasting
+    const statusRes = await fetch('/broadcast/status');
+    const status = await statusRes.json();
+    if (status.live) {
+        alert(`${status.uploader} is already broadcasting. Only one broadcast at a time.`);
+        return;
+    }
+
+    // Ask which channel to save captures to
+    const channelNames = channels.map(c => c.name);
+    const chosen = channelNames.includes('general') ? 'general' : channelNames[0];
+    broadcastChannel = chosen;
+
+    // Request screen capture
+    let stream;
+    try {
+        stream = await navigator.mediaDevices.getDisplayMedia({
+            video: { frameRate: 2 },
+            audio: false
+        });
+    } catch (e) {
+        // User cancelled or permission denied — silent exit
+        return;
+    }
+
+    // Start broadcast on server
+    const startRes = await fetch('/broadcast/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uploader, channel: broadcastChannel })
+    });
+
+    if (!startRes.ok) {
+        const err = await startRes.json();
+        alert(err.error || 'Could not start broadcast');
+        stream.getTracks().forEach(t => t.stop());
+        return;
+    }
+
+    broadcastStream = stream;
+    isBroadcasting = true;
+
+    // Set up canvas for frame capture
+    broadcastCanvas = document.createElement('canvas');
+    broadcastCtx = broadcastCanvas.getContext('2d');
+
+    const video = document.createElement('video');
+    video.srcObject = stream;
+    video.play();
+
+    // Update start button
+    const startBtn = document.getElementById('startBroadcastBtn');
+    if (startBtn) {
+        startBtn.textContent = '⏹ Stop';
+        startBtn.classList.add('is-live');
+        startBtn.onclick = stopBroadcast;
+    }
+
+    // Frame capture loop — change detection, ~2fps
+    broadcastInterval = setInterval(() => {
+        if (!video.videoWidth) return;
+        broadcastCanvas.width = Math.min(video.videoWidth, 1280);
+        broadcastCanvas.height = Math.min(video.videoHeight, 720);
+        broadcastCtx.drawImage(video, 0, 0, broadcastCanvas.width, broadcastCanvas.height);
+
+        const frame = broadcastCanvas.toDataURL('image/jpeg', 0.5);
+
+        // Change detection — skip if frame is identical to last
+        if (frame === lastFrameData) return;
+        lastFrameData = frame;
+
+        socket.emit('broadcast-frame', { frame });
+    }, 500); // every 500ms = ~2fps
+
+    // If user stops sharing via browser UI (clicks "Stop sharing")
+    stream.getVideoTracks()[0].addEventListener('ended', () => {
+        stopBroadcast();
+    });
+}
+
+async function stopBroadcast() {
+    if (!isBroadcasting) return;
+
+    isBroadcasting = false;
+
+    // Stop the capture loop
+    if (broadcastInterval) {
+        clearInterval(broadcastInterval);
+        broadcastInterval = null;
+    }
+
+    // Stop all tracks
+    if (broadcastStream) {
+        broadcastStream.getTracks().forEach(t => t.stop());
+        broadcastStream = null;
+    }
+
+    lastFrameData = null;
+
+    // Tell server broadcast is over
+    await fetch('/broadcast/end', { method: 'POST' });
+
+    // Reset start button
+    const startBtn = document.getElementById('startBroadcastBtn');
+    if (startBtn) {
+        startBtn.textContent = '📡 Broadcast';
+        startBtn.classList.remove('is-live');
+        startBtn.onclick = startBroadcast;
+    }
+}
+
+function showBroadcastBar(data) {
+    const bar = document.getElementById('broadcastBar');
+    const label = document.getElementById('broadcastLabel');
+    const endBtn = document.getElementById('broadcastEndBtn');
+    const joinBtn = document.getElementById('broadcastJoinBtn');
+
+    if (!bar) return;
+
+    label.textContent = `${data.uploader} is broadcasting`;
+    bar.style.display = 'block';
+
+    // Show end button only to the broadcaster
+    if (data.uploader === uploader) {
+        endBtn.style.display = 'inline-block';
+        joinBtn.style.display = 'none';
+    } else {
+        endBtn.style.display = 'none';
+        joinBtn.style.display = 'inline-block';
+    }
+}
+
+function hideBroadcastBar() {
+    const bar = document.getElementById('broadcastBar');
+    if (!bar) return;
+
+    // Show ended toast for 5 seconds then hide bar
+    const label = document.getElementById('broadcastLabel');
+    label.textContent = 'Broadcast ended';
+
+    setTimeout(() => {
+        bar.style.display = 'none';
+    }, 5000);
+}
+
+function joinBroadcast() {
+    const panel = document.getElementById('viewerPanel');
+    const label = document.getElementById('viewerLabel');
+    if (!panel) return;
+
+    label.textContent = `${document.getElementById('broadcastLabel').textContent}`;
+    panel.style.display = 'flex';
+
+    // Tell server we joined — get last frame immediately
+    socket.emit('broadcast-join');
+}
+
+function leaveBroadcast() {
+    const panel = document.getElementById('viewerPanel');
+    if (panel) panel.style.display = 'none';
+
+    // Clear filmstrip
+    const filmstrip = document.getElementById('filmstrip');
+    if (filmstrip) filmstrip.innerHTML = '';
+}
+
+async function captureToChannel() {
+    const frame = document.getElementById('viewerFrame');
+    if (!frame || !frame.src || frame.src === window.location.href) return;
+
+    // Convert data URL to blob
+    const res = await fetch(frame.src);
+    const blob = await res.blob();
+    const file = new File([blob], `broadcast-${Date.now()}.jpg`, { type: 'image/jpeg' });
+
+    uploadFiles([file], broadcastChannel);
+
+}
+
+function raiseHand() {
+    socket.emit('broadcast-reaction', { from: uploader });
+
+    // Visual feedback for the person raising hand
+    const toast = document.createElement('div');
+    toast.className = 'raise-hand-toast';
+    toast.textContent = '✋ Raised hand';
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2000);
+}
+
+function showBroadcastSecureWarning() {
+    const bar = document.getElementById('broadcastBar');
+    const label = document.getElementById('broadcastLabel');
+    if (!bar || !label) return;
+
+    bar.style.display = 'block';
+    label.innerHTML = `Broadcasting requires HTTPS or localhost. 
+        <a href="https://github.com/mohitgauniyal/instbyte#reverse-proxy" 
+           target="_blank" 
+           style="color:#60a5fa;text-decoration:underline">
+           Learn more
+        </a>`;
+
+    // Hide after 6 seconds
+    setTimeout(() => {
+        bar.style.display = 'none';
+        label.textContent = 'Someone is broadcasting';
+    }, 6000);
+}
+
+function updateFilmstrip(frame) {
+    const filmstrip = document.getElementById('filmstrip');
+    if (!filmstrip) return;
+
+    const img = document.createElement('img');
+    img.className = 'filmstrip-frame';
+    img.src = frame;
+    img.title = new Date().toLocaleTimeString();
+    img.onclick = () => {
+        const viewer = document.getElementById('viewerFrame');
+        if (viewer) viewer.src = frame;
+    };
+
+    filmstrip.appendChild(img);
+    filmstrip.scrollLeft = filmstrip.scrollWidth;
+}
+
+// ─── SOCKET LISTENERS ────────────────────────────────────────
+
+socket.on('broadcast-started', (data) => {
+    showBroadcastBar(data);
+});
+
+socket.on('broadcast-ended', () => {
+    hideBroadcastBar();
+    leaveBroadcast();
+
+    // Reset start button if we were the broadcaster
+    if (isBroadcasting) {
+        isBroadcasting = false;
+        const startBtn = document.getElementById('startBroadcastBtn');
+        if (startBtn) {
+            startBtn.textContent = '📡 Broadcast';
+            startBtn.classList.remove('is-live');
+            startBtn.onclick = startBroadcast;
+        }
+    }
+});
+
+socket.on('broadcast-frame', (data) => {
+    const panel = document.getElementById('viewerPanel');
+    if (!panel || panel.style.display === 'none') return;
+
+    const viewer = document.getElementById('viewerFrame');
+    if (viewer) viewer.src = data.frame;
+
+    updateFilmstrip(data.frame);
+});
+
+socket.on('broadcast-reaction-received', ({ from }) => {
+    // Only show to broadcaster
+    if (!isBroadcasting) return;
+
+    const toast = document.createElement('div');
+    toast.className = 'raise-hand-toast';
+    toast.textContent = `✋ ${from} raised their hand`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+});
+
 (async function init() {
     await applyBranding();
     await initName();
@@ -1690,4 +1981,11 @@ function closeAllBottomSheets() {
     retention = info.retention; // null if "never", ms value otherwise
     await loadChannels();
     load();
+
+    // Check if a broadcast is already live when page loads
+    const broadcastRes = await fetch('/broadcast/status');
+    const broadcastStatus = await broadcastRes.json();
+    if (broadcastStatus.live) {
+        showBroadcastBar(broadcastStatus);
+    }
 })();
