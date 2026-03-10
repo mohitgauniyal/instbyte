@@ -1274,42 +1274,6 @@ input[type=text]:focus {
     object-fit: contain;
 }
 
-/* ─── FILMSTRIP ────────────────────────────────────────────── */
-
-.filmstrip {
-    display: flex;
-    gap: 6px;
-    padding: 8px 10px;
-    overflow-x: auto;
-    background: #f9fafb;
-    border-top: 1px solid #e5e7eb;
-    flex-shrink: 0;
-    min-height: 56px;
-    scrollbar-width: thin;
-}
-
-.filmstrip:empty::before {
-    content: "Frames will appear here";
-    font-size: 11px;
-    color: #9ca3af;
-    align-self: center;
-}
-
-.filmstrip-frame {
-    width: 72px;
-    height: 40px;
-    object-fit: cover;
-    border-radius: 4px;
-    border: 1px solid #e5e7eb;
-    cursor: pointer;
-    flex-shrink: 0;
-    transition: border-color 0.15s ease;
-}
-
-.filmstrip-frame:hover {
-    border-color: #2563eb;
-}
-
 /* ─── RAISE HAND TOAST ─────────────────────────────────────── */
 
 .raise-hand-toast {
@@ -1612,9 +1576,6 @@ input[type=text]:focus {
         max-height: 85vh;
     }
 
-    .filmstrip {
-        display: none;
-    }
 }
 
 
@@ -2057,15 +2018,6 @@ input[type=text]:focus {
             color: #d1d5db;
         }
 
-        .filmstrip {
-            background: #161b27;
-            border-top-color: #2d3748;
-        }
-
-        .filmstrip-frame {
-            border-color: #374151;
-        }
-
         .raise-hand-toast {
             background: #1f2937;
         }
@@ -2501,15 +2453,6 @@ input[type=text]:focus {
         background: #2d3748;
         border-color: #374151;
         color: #d1d5db;
-    }
-
-    .filmstrip {
-        background: #161b27;
-        border-top-color: #2d3748;
-    }
-
-    .filmstrip-frame {
-        border-color: #374151;
     }
 
     .raise-hand-toast {

@@ -1917,23 +1917,6 @@ function showBroadcastSecureWarning() {
     }, 6000);
 }
 
-function updateFilmstrip(frame) {
-    const filmstrip = document.getElementById('filmstrip');
-    if (!filmstrip) return;
-
-    const img = document.createElement('img');
-    img.className = 'filmstrip-frame';
-    img.src = frame;
-    img.title = new Date().toLocaleTimeString();
-    img.onclick = () => {
-        const viewer = document.getElementById('viewerFrame');
-        if (viewer) viewer.src = frame;
-    };
-
-    filmstrip.appendChild(img);
-    filmstrip.scrollLeft = filmstrip.scrollWidth;
-}
-
 // ─── SOCKET LISTENERS ────────────────────────────────────────
 
 socket.on('broadcast-started', (data) => {
@@ -1963,7 +1946,6 @@ socket.on('broadcast-frame', (data) => {
     const viewer = document.getElementById('viewerFrame');
     if (viewer) viewer.src = data.frame;
 
-    updateFilmstrip(data.frame);
 });
 
 socket.on('broadcast-reaction-received', ({ from }) => {
