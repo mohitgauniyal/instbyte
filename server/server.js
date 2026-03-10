@@ -833,6 +833,7 @@ app.get("/broadcast/status", (req, res) => {
 
 /* POST /broadcast/start */
 app.post("/broadcast/start", broadcastLimiter, (req, res) => {
+
   if (currentBroadcast) {
     return res.status(409).json({
       error: "Broadcast already in progress",
@@ -840,7 +841,7 @@ app.post("/broadcast/start", broadcastLimiter, (req, res) => {
     });
   }
 
-  const { uploader, channel } = req.body;
+  const { uploader, channel, socketId } = req.body;
   if (!uploader || !channel) {
     return res.status(400).json({ error: "uploader and channel required" });
   }
@@ -849,7 +850,8 @@ app.post("/broadcast/start", broadcastLimiter, (req, res) => {
     uploader,
     channel,
     startedAt: Date.now(),
-    lastFrame: null
+    lastFrame: null,
+    socketId
   };
 
   io.emit("broadcast-started", {
@@ -978,6 +980,12 @@ io.on("connection", (socket) => {
     connectedUsers--;
     console.log(username + " disconnected | total:", connectedUsers);
     io.emit("user-count", connectedUsers);
+
+    if (currentBroadcast && currentBroadcast.socketId === socket.id) {
+      currentBroadcast = null;
+      io.emit("broadcast-ended");
+      console.log("Broadcast ended — broadcaster disconnected");
+    }
   });
 });
 
@@ -1026,19 +1034,21 @@ const PREFERRED = parseInt(process.env.PORT) || config.server.port;
 const localIP = getLocalIP();
 
 let PORT;
-findFreePort(PREFERRED).then(p => {
-  PORT = p;
-  server.listen(PORT, () => {
-    console.log("\nInstbyte running");
-    console.log("Local:   http://localhost:" + PORT);
-    console.log("Network: http://" + localIP + ":" + PORT);
-    if (PORT !== PREFERRED) {
-      console.log(`(port ${PREFERRED} was busy, switched to ${PORT})`);
-    }
-    console.log("");
-    scanOrphans();
+if (process.env.INSTBYTE_BOOT === '1') {
+  findFreePort(PREFERRED).then(p => {
+    PORT = p;
+    server.listen(PORT, () => {
+      console.log("\nInstbyte running");
+      console.log("Local:   http://localhost:" + PORT);
+      console.log("Network: http://" + localIP + ":" + PORT);
+      if (PORT !== PREFERRED) {
+        console.log(`(port ${PREFERRED} was busy, switched to ${PORT})`);
+      }
+      console.log("");
+      scanOrphans();
+    });
   });
-});
+}
 
 module.exports = { app, server, sessions };
 

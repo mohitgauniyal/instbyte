@@ -15,6 +15,7 @@ let broadcastInterval = null;
 let lastFrameData = null;
 let broadcastChannel = 'general';
 let viewerCount = 0;
+let audioCtx = null;
 
 const seenObserver = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
@@ -171,7 +172,7 @@ function escapeHtml(str) {
 
 function playChime() {
     try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const ctx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
 
         const gain = ctx.createGain();
         gain.connect(ctx.destination);
@@ -1729,7 +1730,7 @@ async function startBroadcast() {
     const startRes = await fetch('/broadcast/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uploader, channel: broadcastChannel })
+        body: JSON.stringify({ uploader, channel: broadcastChannel, socketId: socket.id })
     });
 
     if (!startRes.ok) {
@@ -1741,6 +1742,12 @@ async function startBroadcast() {
 
     broadcastStream = stream;
     isBroadcasting = true;
+
+    // Warm up AudioContext while we have a user gesture
+    try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        await audioCtx.resume();
+    } catch (e) { }
 
     // Set up canvas for frame capture
     broadcastCanvas = document.createElement('canvas');
@@ -1963,11 +1970,13 @@ socket.on('broadcast-reaction-received', ({ from }) => {
     // Only show to broadcaster
     if (!isBroadcasting) return;
 
+    playChime();
+
     const toast = document.createElement('div');
     toast.className = 'raise-hand-toast';
     toast.textContent = `✋ ${from} raised their hand`;
     document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
+    setTimeout(() => toast.remove(), 8000);
 });
 
 (async function init() {

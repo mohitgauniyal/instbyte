@@ -25,4 +25,5 @@ process.env.INSTBYTE_UPLOADS = uploadsDir;
 // ========================
 // BOOT
 // ========================
+process.env.INSTBYTE_BOOT = '1';
 require("../server/server.js");
