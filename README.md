@@ -305,6 +305,8 @@ The difference between *a tool you use* and *a tool you own.*
 
 **Presence awareness** — see how many people are currently connected in real time.
 
+**Live broadcast** — share your screen in real time with everyone on the network. Viewers join instantly from their browser, no plugins or installs needed. Built on WebRTC for smooth, low-latency video. Includes mic audio, viewer mute/unmute, raise hand, and screen capture to channel.
+
 **Read receipts** — see how many devices have viewed each shared item. Updates live as teammates open the page.
 
 **Item management** — add optional titles to label any item for future reference. Edit text items inline without deleting and re-pasting. Pinned items are protected from both manual deletion and auto-cleanup.
@@ -312,6 +314,91 @@ The difference between *a tool you use* and *a tool you own.*
 **Mobile ready** — install as a PWA directly from your browser. Add to Home Screen on iOS or Android for a native app feel without the App Store.
 
 **Security hardened** — rate limiting on all write endpoints, magic number file validation, filename sanitisation, and forced download for executable file types.
+
+---
+
+## Broadcasting
+
+One person shares their screen — everyone else on the network watches live in their browser. No plugins, no accounts, no external services. Built on WebRTC for smooth, low-latency video.
+
+### How to broadcast
+
+Click **📡 Broadcast** in the composer. Your browser will ask you to choose a screen, window, or tab to share. Once you pick one, a live bar appears at the top for all connected devices — teammates click **Join** to watch.
+
+While broadcasting you can still use Instbyte normally — send text, drop files, switch channels. The broadcast runs in the background.
+
+To stop, click **⏹ Stop** in the composer or use the browser's built-in "Stop sharing" bar.
+
+### As a viewer
+
+When a broadcast is live, a bar appears at the top of the page. Click **Join** to open the viewer panel. The panel is draggable and resizable — move it anywhere on your screen.
+
+- **📸 Capture** — saves the current frame as an image to the active channel
+- **✋ Raise hand** — notifies the broadcaster with a sound and toast
+- **🔇 / 🔊** — mute and unmute audio
+- **─** — minimize the panel without leaving the broadcast
+- **✕** — leave the broadcast entirely
+
+### Audio
+
+Instbyte captures your microphone alongside the screen share by default. Viewers are muted on join — click 🔇 to unmute.
+
+To share audio playing on your screen (videos, music, system sounds), select a **browser tab** in the screen picker and enable **Share tab audio**. Window and full-screen capture do not carry system audio — this is a browser limitation.
+
+### HTTPS requirement
+
+Broadcasting uses `getDisplayMedia` which browsers only allow on secure connections. This means:
+
+- **localhost** — always works. If you run `npx instbyte` on your own machine and open `http://localhost:3000`, you can broadcast.
+- **LAN via HTTP** — viewers can watch but cannot broadcast themselves. Only the person running the server can broadcast.
+- **LAN via HTTPS** — everyone on the network can broadcast.
+
+### Enabling broadcast for everyone on your network
+
+To let any device on your LAN broadcast, run Caddy alongside Instbyte. Caddy adds HTTPS automatically — no certificate setup needed.
+
+**Install Caddy:**
+```bash
+# macOS
+brew install caddy
+
+# Ubuntu / Debian
+sudo apt install caddy
+```
+
+**Run alongside Instbyte:**
+```bash
+# Terminal 1
+npx instbyte
+
+# Terminal 2 — replace with your machine's local IP
+caddy reverse-proxy --from https://192.168.1.x --to localhost:3000
+```
+
+Everyone on the network opens `https://192.168.1.x` instead of the plain HTTP URL. The first visit on each device will show a certificate warning — click **Advanced → Proceed**. After that, full HTTPS, anyone can broadcast.
+
+For a permanent setup with a real domain, see the [Reverse Proxy](#reverse-proxy) section.
+
+### Advanced: broadcast across subnets or over the internet
+
+WebRTC peer connections work natively on a LAN without any relay server. If you're running Instbyte on a VPS or across different subnets, WebRTC needs a TURN relay to punch through NAT.
+
+Install and run [coturn](https://github.com/coturn/coturn) on your server:
+```bash
+sudo apt install coturn
+```
+
+Minimal `/etc/turnserver.conf`:
+```
+listening-port=3478
+fingerprint
+lt-cred-mech
+user=instbyte:yourpassword
+realm=yourdomain.com
+```
+
+Then update the STUN_SERVERS config in `client/js/app.js` to point to your TURN server. Teams doing this are already comfortable with server config — the coturn docs cover the rest.
+```
 
 ---
 
@@ -346,6 +433,7 @@ node server/server.js
 - Home lab file sharing without setting up NAS or cloud sync
 - Piping build logs or stack traces from CI or terminal directly into a shared channel
 - Sharing sensitive credentials or config files over LAN without leaving a cloud trail
+- Live screen sharing during standups, design reviews, or debugging sessions — no Zoom link needed
 
 ---
 
@@ -393,7 +481,7 @@ Instbyte follows [Semantic Versioning](https://semver.org). See [Releases](https
 
 Instbyte is intentionally lightweight and LAN-first. If you want to extend it — CLI tools, themes, integrations — open an issue or submit a pull request.
 
-The codebase has a full test suite (184 tests across unit and integration). Run `npm test` before submitting anything. Issues tagged **good first issue** are a good starting point.
+The codebase has a full test suite (195 tests across unit and integration). Run `npm test` before submitting anything. Issues tagged **good first issue** are a good starting point.
 
 ---
 
