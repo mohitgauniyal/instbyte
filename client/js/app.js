@@ -1768,6 +1768,14 @@ async function stopBroadcast() {
 
     isBroadcasting = false;
 
+    // Reset UI immediately — before any async calls that might fail
+    const startBtn = document.getElementById('startBroadcastBtn');
+    if (startBtn) {
+        startBtn.textContent = '📡 Broadcast';
+        startBtn.classList.remove('is-live');
+        startBtn.onclick = startBroadcast;
+    }
+
     // Close all peer connections to viewers
     peerConnections.forEach(pc => pc.close());
     peerConnections.clear();
@@ -1777,14 +1785,8 @@ async function stopBroadcast() {
         broadcastStream = null;
     }
 
-    await fetch('/broadcast/end', { method: 'POST' });
-
-    const startBtn = document.getElementById('startBroadcastBtn');
-    if (startBtn) {
-        startBtn.textContent = '📡 Broadcast';
-        startBtn.classList.remove('is-live');
-        startBtn.onclick = startBroadcast;
-    }
+    // Best effort — server may already be down
+    try { await fetch('/broadcast/end', { method: 'POST' }); } catch (e) { }
 }
 
 // Called when broadcaster gets notified a new viewer joined
@@ -1861,20 +1863,26 @@ function joinBroadcast() {
     label.textContent = `${document.getElementById('broadcastLabel').textContent}`;
     panel.style.display = 'flex';
 
+    // Hide join button while viewing
+    const joinBtn = document.getElementById('broadcastJoinBtn');
+    if (joinBtn) joinBtn.style.display = 'none';
+
     // Reset position to default top-right on each join
     panel.style.left = '';
     panel.style.top = '';
     panel.style.right = '20px';
 
     makeDraggable(panel);
-
-    // Tell server we joined — get last frame immediately
     socket.emit('broadcast-join');
 }
 
 function leaveBroadcast() {
     const panel = document.getElementById('viewerPanel');
     if (panel) panel.style.display = 'none';
+
+    // Restore join button
+    const joinBtn = document.getElementById('broadcastJoinBtn');
+    if (joinBtn) joinBtn.style.display = 'inline-block';
 
     // Clean up viewer peer connection
     if (viewerPeerConnection) {
@@ -2091,6 +2099,31 @@ socket.on('webrtc-ice', async ({ candidate, fromId }) => {
     // Viewer receives from broadcaster
     if (viewerPeerConnection) {
         try { await viewerPeerConnection.addIceCandidate(new RTCIceCandidate(candidate)); } catch (e) { }
+    }
+});
+
+socket.on('disconnect', () => {
+    // Trigger the same cleanup flow as a normal broadcast-ended event
+    if (isBroadcasting || viewerPeerConnection) {
+        isBroadcasting = false;
+
+        peerConnections.forEach(pc => pc.close());
+        peerConnections.clear();
+
+        if (broadcastStream) {
+            broadcastStream.getTracks().forEach(t => t.stop());
+            broadcastStream = null;
+        }
+
+        const startBtn = document.getElementById('startBroadcastBtn');
+        if (startBtn) {
+            startBtn.textContent = '📡 Broadcast';
+            startBtn.classList.remove('is-live');
+            startBtn.onclick = startBroadcast;
+        }
+
+        hideBroadcastBar();
+        leaveBroadcast();
     }
 });
 
