@@ -211,71 +211,13 @@ When a broadcast is live, a bar appears at the top of the page. Click **Join** t
 - **─** — minimize the panel without leaving the broadcast
 - **✕** — leave the broadcast entirely
 
-### Audio
-
-Instbyte captures your microphone alongside the screen share by default. Viewers are muted on join — click 🔇 to unmute.
-
-To share audio playing on your screen (videos, music, system sounds), select a **browser tab** in the screen picker and enable **Share tab audio**. Window and full-screen capture do not carry system audio — this is a browser limitation.
-
-### HTTPS requirement
-
-Broadcasting uses `getDisplayMedia` which browsers only allow on secure connections. This means:
-
-- **localhost** — always works. If you run `npx instbyte` on your own machine and open `http://localhost:3000`, you can broadcast.
-- **LAN via HTTP** — viewers can watch but cannot broadcast themselves. Only the person running the server can broadcast.
-- **LAN via HTTPS** — everyone on the network can broadcast.
-
-### Enabling broadcast for everyone on your network
-
-To let any device on your LAN broadcast, run Caddy alongside Instbyte. Caddy adds HTTPS automatically — no certificate setup needed.
-
-**Install Caddy:**
-```bash
-# macOS
-brew install caddy
-
-# Ubuntu / Debian
-sudo apt install caddy
-```
-
-**Run alongside Instbyte:**
-```bash
-# Terminal 1
-npx instbyte
-
-# Terminal 2 — replace with your machine's local IP
-caddy reverse-proxy --from https://192.168.1.x --to localhost:3000
-```
-
-Everyone on the network opens `https://192.168.1.x` instead of the plain HTTP URL. The first visit on each device will show a certificate warning — click **Advanced → Proceed**. After that, full HTTPS, anyone can broadcast.
-
-For a permanent setup with a real domain, see the [Reverse Proxy](#reverse-proxy) section.
-
-### Advanced: broadcast across subnets or over the internet
-
-WebRTC peer connections work natively on a LAN without any relay server. If you're running Instbyte on a VPS or across different subnets, WebRTC needs a TURN relay to punch through NAT.
-
-Install and run [coturn](https://github.com/coturn/coturn) on your server:
-```bash
-sudo apt install coturn
-```
-
-Minimal `/etc/turnserver.conf`:
-```
-listening-port=3478
-fingerprint
-lt-cred-mech
-user=instbyte:yourpassword
-realm=yourdomain.com
-```
-
-Then update the STUN_SERVERS config in `client/js/app.js` to point to your TURN server. Teams doing this are already comfortable with server config — the coturn docs cover the rest.
-```
+For HTTPS setup, enabling broadcast for all devices, and advanced network configuration, see the [Deployment Guide](docs/deployment.md#broadcasting).
 
 ---
 
 ## Keyboard Shortcuts
 
+```
 | Key | Action |
 |---|---|
 | `/` | Focus search |

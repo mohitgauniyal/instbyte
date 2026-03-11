@@ -173,3 +173,56 @@ proxy_pass http://instbyte:3000;
 ### Keeping it LAN-only
 
 If you don't want external access but still want HTTPS on your local network, tools like [Tailscale](https://tailscale.com) or [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) are good options that require no open ports.
+
+## Broadcasting
+
+### Audio
+
+Instbyte captures your microphone alongside the screen share by default. Viewers are muted on join — click 🔇 to unmute.
+
+To share audio playing on your screen (videos, music, system sounds), select a **browser tab** in the screen picker and enable **Share tab audio**. Window and full-screen capture do not carry system audio — this is a browser limitation.
+
+### HTTPS requirement
+
+Broadcasting uses `getDisplayMedia` which browsers only allow on secure connections:
+
+- **localhost** — always works. The person running `npx instbyte` can always broadcast.
+- **LAN via HTTP** — viewers can watch but cannot broadcast themselves.
+- **LAN via HTTPS** — everyone on the network can broadcast.
+
+### Enabling broadcast for everyone on your network
+
+Run Caddy alongside Instbyte. Caddy adds HTTPS automatically — no certificate setup needed.
+```bash
+# Install Caddy
+brew install caddy        # macOS
+sudo apt install caddy    # Ubuntu / Debian
+
+# Terminal 1
+npx instbyte
+
+# Terminal 2 — replace with your machine's local IP
+caddy reverse-proxy --from https://192.168.1.x --to localhost:3000
+```
+
+First visit on each device will show a certificate warning — click **Advanced → Proceed**. After that, full HTTPS, anyone can broadcast.
+
+### Advanced: broadcast across subnets or over the internet
+
+WebRTC works natively on a LAN without a relay server. For VPS or cross-subnet deployments, WebRTC needs a TURN relay to punch through NAT.
+
+Install [coturn](https://github.com/coturn/coturn):
+```bash
+sudo apt install coturn
+```
+
+Minimal `/etc/turnserver.conf`:
+```
+listening-port=3478
+fingerprint
+lt-cred-mech
+user=instbyte:yourpassword
+realm=yourdomain.com
+```
+
+Then update `STUN_SERVERS` in `client/js/app.js` to point to your TURN server.
