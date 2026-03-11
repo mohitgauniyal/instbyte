@@ -1724,8 +1724,16 @@ async function startBroadcast() {
     try {
         stream = await navigator.mediaDevices.getDisplayMedia({
             video: { frameRate: { ideal: 30 }, width: { ideal: 1920 }, height: { ideal: 1080 } },
-            audio: false
+            audio: true
         });
+
+        // Mix in microphone if available — failure is silent, broadcast continues without mic
+        try {
+            const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            micStream.getAudioTracks().forEach(track => stream.addTrack(track));
+        } catch (e) {
+            // Mic denied or unavailable — continue without it
+        }
     } catch (e) {
         return;
     }
@@ -1884,6 +1892,13 @@ function leaveBroadcast() {
     const joinBtn = document.getElementById('broadcastJoinBtn');
     if (joinBtn) joinBtn.style.display = 'inline-block';
 
+    // Reset audio button to muted state
+    const audioBtn = document.getElementById('audioToggleBtn');
+    if (audioBtn) {
+        audioBtn.textContent = '🔇';
+        audioBtn.title = 'Unmute audio';
+    }
+
     // Clean up viewer peer connection
     if (viewerPeerConnection) {
         viewerPeerConnection.close();
@@ -1891,10 +1906,11 @@ function leaveBroadcast() {
     }
     broadcasterId = null;
 
-    // Stop video stream on viewer element
+    // Stop video stream and reset audio on viewer element
     const video = document.getElementById('viewerFrame');
     if (video) {
         video.srcObject = null;
+        video.muted = true;
     }
 }
 
@@ -1951,6 +1967,16 @@ function toggleMinimize() {
     const panel = document.getElementById('viewerPanel');
     if (!panel) return;
     panel.classList.toggle('minimized');
+}
+
+function toggleAudio() {
+    const video = document.getElementById('viewerFrame');
+    const btn = document.getElementById('audioToggleBtn');
+    if (!video || !btn) return;
+
+    video.muted = !video.muted;
+    btn.textContent = video.muted ? '🔇' : '🔊';
+    btn.title = video.muted ? 'Unmute audio' : 'Mute audio';
 }
 
 function makeDraggable(panel) {
