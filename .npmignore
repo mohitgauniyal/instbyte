@@ -13,3 +13,4 @@ server/db.sqlite
 assets/
 tests/
 .github/
+docs/

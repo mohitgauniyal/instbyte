@@ -102,147 +102,19 @@ For teams who want auth, custom retention, or branding — create `instbyte.conf
 
 Then run `npx instbyte` in the same directory. The config is picked up automatically.
 
-### Keeping It Running
-For persistent team use, run it as a background process:
-
-```bash
-# using pm2
-npm install -g pm2
-pm2 start "npx instbyte" --name instbyte
-pm2 save
-```
-
-Or use any process manager you already have — systemd, screen, tmux.
+For persistent deployment options including pm2, systemd, and Docker, see the [Deployment Guide](docs/deployment.md).
 
 ---
 
 ## Docker
 
-The fastest way to run Instbyte with Docker:
-```bash
-docker compose up -d
-```
-
-Or with plain Docker:
-```bash
-docker run -d \
-  -p 3000:3000 \
-  -v $(pwd)/instbyte-data:/data \
-  -e INSTBYTE_DATA=/data \
-  -e INSTBYTE_UPLOADS=/data/uploads \
-  --name instbyte \
-  mohitgauniyal/instbyte
-```
-
-Data persists in `./instbyte-data` on your host. The same folder used by `npx instbyte` — so switching between the two preserves all your data.
-
-### With a config file
-
-Mount your config file into the container:
-```yaml
-services:
-  instbyte:
-    image: mohitgauniyal/instbyte
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./instbyte-data:/data
-      - ./instbyte.config.json:/app/instbyte.config.json
-    environment:
-      - INSTBYTE_DATA=/data
-      - INSTBYTE_UPLOADS=/data/uploads
-    restart: unless-stopped
-```
-
-### Changing the port
-
-Edit the host port in `docker-compose.yml`:
-```yaml
-ports:
-  - "8080:3000"  # now runs on port 8080
-```
-
-> **Note:** File uploads may not work correctly on Windows Docker Desktop due to network limitations. For Windows, use `npx instbyte` directly or deploy on a Linux server.
+For Docker setup, persistent data, and config file mounting, see [Deployment Guide](docs/deployment.md).
 
 ---
 
 ## Reverse Proxy
 
-For teams who want to access Instbyte over HTTPS or from outside their local network, running it behind a reverse proxy is the standard approach.
-
-> **Important:** Instbyte uses WebSockets for real-time sync. Your proxy must be configured to forward WebSocket connections — otherwise the app will load but live updates will stop working.
-
-### Nginx
-```nginx
-server {
-    listen 80;
-    server_name instbyte.yourdomain.com;
-
-    # Redirect HTTP to HTTPS
-    return 301 https://$host$request_uri;
-}
-
-server {
-    listen 443 ssl;
-    server_name instbyte.yourdomain.com;
-
-    ssl_certificate     /etc/letsencrypt/live/instbyte.yourdomain.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/instbyte.yourdomain.com/privkey.pem;
-
-    # Increase max upload size to match Instbyte's limit
-    client_max_body_size 2G;
-
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_http_version 1.1;
-
-        # Required for WebSocket support
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-
-        # Prevent proxy timeouts on large uploads
-        proxy_read_timeout 300s;
-        proxy_send_timeout 300s;
-    }
-}
-```
-
-Get a free SSL certificate with Certbot:
-```bash
-certbot --nginx -d instbyte.yourdomain.com
-```
-
-### Caddy
-
-Caddy automatically handles HTTPS certificates — no Certbot needed.
-```caddy
-instbyte.yourdomain.com {
-    reverse_proxy localhost:3000
-}
-```
-
-Caddy handles WebSocket forwarding and HTTPS automatically. That's all you need.
-
-### With Docker
-
-If running Instbyte via Docker, proxy to the mapped host port:
-```nginx
-proxy_pass http://localhost:3000;
-```
-
-Or use Docker's internal network — replace `localhost` with the container name:
-```nginx
-proxy_pass http://instbyte:3000;
-```
-
-### Keeping it LAN-only
-
-If you don't want external access but still want HTTPS on your local network, tools like [Tailscale](https://tailscale.com) or [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) are good options that require no open ports.
+For Nginx, Caddy, and HTTPS setup, see [Deployment Guide](docs/deployment.md).
 
 ---
 
@@ -439,35 +311,7 @@ node server/server.js
 
 ## Terminal Usage
 
-Since Instbyte exposes a simple HTTP API, you can push content directly from your terminal using `curl` — no browser needed.
-
-**Send a log file:**
-```bash
-curl -X POST http://192.168.x.x:3000/text \
-  -H "Content-Type: application/json" \
-  -d "{\"content\": \"$(cat error.log)\", \"channel\": \"general\", \"uploader\": \"terminal\"}"
-```
-
-**Pipe command output directly:**
-```bash
-npm run build 2>&1 | curl -X POST http://192.168.x.x:3000/text \
-  -H "Content-Type: application/json" \
-  --data-binary @-  \
-  -H "X-Channel: general" \
-  -H "X-Uploader: CI"
-```
-
-**Upload a file from the terminal:**
-```bash
-curl -X POST http://192.168.x.x:3000/upload \
-  -F "file=@./build.log" \
-  -F "channel=general" \
-  -F "uploader=terminal"
-```
-
-Replace `192.168.x.x:3000` with the URL shown when Instbyte starts. If auth is enabled, add `-b "instbyte_auth=your-token"` to each request.
-
-Useful for piping stack traces, build logs, or environment dumps straight into a channel your whole team can see instantly.
+Push content from your terminal using curl — no browser needed. See [Terminal Usage Guide](docs/terminal-usage.md).
 
 ---
 
