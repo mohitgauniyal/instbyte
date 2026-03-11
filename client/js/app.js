@@ -9,13 +9,23 @@ const seenEmitted = new Set(); // item IDs this session has already emitted seen
 // BROADCAST STATE
 let isBroadcasting = false;
 let broadcastStream = null;
-let broadcastCanvas = null;
-let broadcastCtx = null;
-let broadcastInterval = null;
-let lastFrameData = null;
 let broadcastChannel = 'general';
-let viewerCount = 0;
 let audioCtx = null;
+
+// WebRTC — broadcaster maintains one peer connection per viewer
+// key: viewerId (socket id), value: RTCPeerConnection
+const peerConnections = new Map();
+
+// WebRTC — viewer holds a single peer connection to broadcaster
+let viewerPeerConnection = null;
+let broadcasterId = null;
+
+const STUN_SERVERS = {
+    iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' }
+    ]
+};
 
 const seenObserver = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
@@ -1695,13 +1705,11 @@ function closeAllBottomSheets() {
 // ============================================================
 
 async function startBroadcast() {
-    // Check secure context first
     if (!window.isSecureContext) {
         showBroadcastSecureWarning();
         return;
     }
 
-    // Check if someone else is already broadcasting
     const statusRes = await fetch('/broadcast/status');
     const status = await statusRes.json();
     if (status.live) {
@@ -1709,24 +1717,27 @@ async function startBroadcast() {
         return;
     }
 
-    // Ask which channel to save captures to
     const channelNames = channels.map(c => c.name);
-    const chosen = channelNames.includes('general') ? 'general' : channelNames[0];
-    broadcastChannel = chosen;
+    broadcastChannel = channelNames.includes('general') ? 'general' : channelNames[0];
 
-    // Request screen capture
     let stream;
     try {
         stream = await navigator.mediaDevices.getDisplayMedia({
-            video: { frameRate: 2 },
-            audio: false
+            video: { frameRate: { ideal: 30 }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+            audio: true
         });
+
+        // Mix in microphone if available — failure is silent, broadcast continues without mic
+        try {
+            const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            micStream.getAudioTracks().forEach(track => stream.addTrack(track));
+        } catch (e) {
+            // Mic denied or unavailable — continue without it
+        }
     } catch (e) {
-        // User cancelled or permission denied — silent exit
         return;
     }
 
-    // Start broadcast on server
     const startRes = await fetch('/broadcast/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1743,21 +1754,11 @@ async function startBroadcast() {
     broadcastStream = stream;
     isBroadcasting = true;
 
-    // Warm up AudioContext while we have a user gesture
     try {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         await audioCtx.resume();
     } catch (e) { }
 
-    // Set up canvas for frame capture
-    broadcastCanvas = document.createElement('canvas');
-    broadcastCtx = broadcastCanvas.getContext('2d');
-
-    const video = document.createElement('video');
-    video.srcObject = stream;
-    video.play();
-
-    // Update start button
     const startBtn = document.getElementById('startBroadcastBtn');
     if (startBtn) {
         startBtn.textContent = '⏹ Stop';
@@ -1765,23 +1766,6 @@ async function startBroadcast() {
         startBtn.onclick = stopBroadcast;
     }
 
-    // Frame capture loop — change detection, ~2fps
-    broadcastInterval = setInterval(() => {
-        if (!video.videoWidth) return;
-        broadcastCanvas.width = Math.min(video.videoWidth, 1280);
-        broadcastCanvas.height = Math.min(video.videoHeight, 720);
-        broadcastCtx.drawImage(video, 0, 0, broadcastCanvas.width, broadcastCanvas.height);
-
-        const frame = broadcastCanvas.toDataURL('image/jpeg', 0.5);
-
-        // Change detection — skip if frame is identical to last
-        if (frame === lastFrameData) return;
-        lastFrameData = frame;
-
-        socket.emit('broadcast-frame', { frame });
-    }, 500); // every 500ms = ~2fps
-
-    // If user stops sharing via browser UI (clicks "Stop sharing")
     stream.getVideoTracks()[0].addEventListener('ended', () => {
         stopBroadcast();
     });
@@ -1792,30 +1776,57 @@ async function stopBroadcast() {
 
     isBroadcasting = false;
 
-    // Stop the capture loop
-    if (broadcastInterval) {
-        clearInterval(broadcastInterval);
-        broadcastInterval = null;
-    }
-
-    // Stop all tracks
-    if (broadcastStream) {
-        broadcastStream.getTracks().forEach(t => t.stop());
-        broadcastStream = null;
-    }
-
-    lastFrameData = null;
-
-    // Tell server broadcast is over
-    await fetch('/broadcast/end', { method: 'POST' });
-
-    // Reset start button
+    // Reset UI immediately — before any async calls that might fail
     const startBtn = document.getElementById('startBroadcastBtn');
     if (startBtn) {
         startBtn.textContent = '📡 Broadcast';
         startBtn.classList.remove('is-live');
         startBtn.onclick = startBroadcast;
     }
+
+    // Close all peer connections to viewers
+    peerConnections.forEach(pc => pc.close());
+    peerConnections.clear();
+
+    if (broadcastStream) {
+        broadcastStream.getTracks().forEach(t => t.stop());
+        broadcastStream = null;
+    }
+
+    // Best effort — server may already be down
+    try { await fetch('/broadcast/end', { method: 'POST' }); } catch (e) { }
+}
+
+// Called when broadcaster gets notified a new viewer joined
+async function handleViewerJoined(viewerId) {
+    if (!broadcastStream) return;
+
+    const pc = new RTCPeerConnection(STUN_SERVERS);
+    peerConnections.set(viewerId, pc);
+
+    // Add all tracks from the screen share stream
+    broadcastStream.getTracks().forEach(track => {
+        pc.addTrack(track, broadcastStream);
+    });
+
+    // Send ICE candidates to this viewer as they're discovered
+    pc.onicecandidate = ({ candidate }) => {
+        if (candidate) {
+            socket.emit('webrtc-ice', { candidate, targetId: viewerId });
+        }
+    };
+
+    pc.onconnectionstatechange = () => {
+        if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+            pc.close();
+            peerConnections.delete(viewerId);
+        }
+    };
+
+    // Create and send offer to viewer
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    socket.emit('webrtc-offer', { offer, viewerId });
 }
 
 function showBroadcastBar(data) {
@@ -1860,14 +1871,16 @@ function joinBroadcast() {
     label.textContent = `${document.getElementById('broadcastLabel').textContent}`;
     panel.style.display = 'flex';
 
+    // Hide join button while viewing
+    const joinBtn = document.getElementById('broadcastJoinBtn');
+    if (joinBtn) joinBtn.style.display = 'none';
+
     // Reset position to default top-right on each join
     panel.style.left = '';
     panel.style.top = '';
     panel.style.right = '20px';
 
     makeDraggable(panel);
-
-    // Tell server we joined — get last frame immediately
     socket.emit('broadcast-join');
 }
 
@@ -1875,22 +1888,48 @@ function leaveBroadcast() {
     const panel = document.getElementById('viewerPanel');
     if (panel) panel.style.display = 'none';
 
-    // Clear filmstrip
-    const filmstrip = document.getElementById('filmstrip');
-    if (filmstrip) filmstrip.innerHTML = '';
+    // Restore join button
+    const joinBtn = document.getElementById('broadcastJoinBtn');
+    if (joinBtn) joinBtn.style.display = 'inline-block';
+
+    // Reset audio button to muted state
+    const audioBtn = document.getElementById('audioToggleBtn');
+    if (audioBtn) {
+        audioBtn.textContent = '🔇';
+        audioBtn.title = 'Unmute audio';
+    }
+
+    // Clean up viewer peer connection
+    if (viewerPeerConnection) {
+        viewerPeerConnection.close();
+        viewerPeerConnection = null;
+    }
+    broadcasterId = null;
+
+    // Stop video stream and reset audio on viewer element
+    const video = document.getElementById('viewerFrame');
+    if (video) {
+        video.srcObject = null;
+        video.muted = true;
+    }
 }
 
 async function captureToChannel() {
-    const frame = document.getElementById('viewerFrame');
-    if (!frame || !frame.src || frame.src === window.location.href) return;
+    const video = document.getElementById('viewerFrame');
+    if (!video || !video.srcObject) return;
 
-    // Convert data URL to blob
-    const res = await fetch(frame.src);
-    const blob = await res.blob();
-    const file = new File([blob], `broadcast-${Date.now()}.jpg`, { type: 'image/jpeg' });
+    // Draw current video frame to canvas and convert to blob
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 720;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    uploadFiles([file], broadcastChannel);
-
+    canvas.toBlob((blob) => {
+        if (!blob) return;
+        const file = new File([blob], `broadcast-${Date.now()}.jpg`, { type: 'image/jpeg' });
+        uploadFiles([file], broadcastChannel);
+    }, 'image/jpeg', 0.9);
 }
 
 function raiseHand() {
@@ -1928,6 +1967,16 @@ function toggleMinimize() {
     const panel = document.getElementById('viewerPanel');
     if (!panel) return;
     panel.classList.toggle('minimized');
+}
+
+function toggleAudio() {
+    const video = document.getElementById('viewerFrame');
+    const btn = document.getElementById('audioToggleBtn');
+    if (!video || !btn) return;
+
+    video.muted = !video.muted;
+    btn.textContent = video.muted ? '🔇' : '🔊';
+    btn.title = video.muted ? 'Unmute audio' : 'Mute audio';
 }
 
 function makeDraggable(panel) {
@@ -1989,7 +2038,6 @@ socket.on('broadcast-ended', () => {
     hideBroadcastBar();
     leaveBroadcast();
 
-    // Reset start button if we were the broadcaster
     if (isBroadcasting) {
         isBroadcasting = false;
         const startBtn = document.getElementById('startBroadcastBtn');
@@ -2001,17 +2049,113 @@ socket.on('broadcast-ended', () => {
     }
 });
 
-socket.on('broadcast-frame', (data) => {
-    const panel = document.getElementById('viewerPanel');
-    if (!panel || panel.style.display === 'none') return;
+// ─── WEBRTC — BROADCASTER SIDE ───────────────────────────────
 
-    const viewer = document.getElementById('viewerFrame');
-    if (viewer) viewer.src = data.frame;
-
+// A new viewer joined — broadcaster initiates peer connection
+socket.on('webrtc-viewer-joined', ({ viewerId }) => {
+    if (!isBroadcasting) return;
+    handleViewerJoined(viewerId);
 });
 
+// Broadcaster receives answer from a viewer
+socket.on('webrtc-answer', async ({ answer, viewerId }) => {
+    const pc = peerConnections.get(viewerId);
+    if (!pc) return;
+    try {
+        await pc.setRemoteDescription(new RTCSessionDescription(answer));
+    } catch (e) {
+        console.error('Error setting remote description on broadcaster:', e);
+    }
+});
+
+// ─── WEBRTC — VIEWER SIDE ────────────────────────────────────
+
+// Viewer receives offer from broadcaster
+socket.on('webrtc-offer', async ({ offer, broadcasterId: bid }) => {
+    broadcasterId = bid;
+
+    // Clean up any existing peer connection
+    if (viewerPeerConnection) {
+        viewerPeerConnection.close();
+        viewerPeerConnection = null;
+    }
+
+    const pc = new RTCPeerConnection(STUN_SERVERS);
+    viewerPeerConnection = pc;
+
+    // When stream arrives, attach to video element
+    pc.ontrack = ({ streams }) => {
+        const video = document.getElementById('viewerFrame');
+        if (video && streams[0]) {
+            video.srcObject = streams[0];
+        }
+    };
+
+    // Send ICE candidates back to broadcaster
+    pc.onicecandidate = ({ candidate }) => {
+        if (candidate) {
+            socket.emit('webrtc-ice', { candidate, targetId: broadcasterId });
+        }
+    };
+
+    pc.onconnectionstatechange = () => {
+        if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+            pc.close();
+            viewerPeerConnection = null;
+        }
+    };
+
+    await pc.setRemoteDescription(new RTCSessionDescription(offer));
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    socket.emit('webrtc-answer', { answer, broadcasterId });
+});
+
+// ICE candidates — both broadcaster and viewer use same handler
+socket.on('webrtc-ice', async ({ candidate, fromId }) => {
+    // Broadcaster receives from viewer
+    if (isBroadcasting) {
+        const pc = peerConnections.get(fromId);
+        if (pc) {
+            try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch (e) { }
+        }
+        return;
+    }
+
+    // Viewer receives from broadcaster
+    if (viewerPeerConnection) {
+        try { await viewerPeerConnection.addIceCandidate(new RTCIceCandidate(candidate)); } catch (e) { }
+    }
+});
+
+socket.on('disconnect', () => {
+    // Trigger the same cleanup flow as a normal broadcast-ended event
+    if (isBroadcasting || viewerPeerConnection) {
+        isBroadcasting = false;
+
+        peerConnections.forEach(pc => pc.close());
+        peerConnections.clear();
+
+        if (broadcastStream) {
+            broadcastStream.getTracks().forEach(t => t.stop());
+            broadcastStream = null;
+        }
+
+        const startBtn = document.getElementById('startBroadcastBtn');
+        if (startBtn) {
+            startBtn.textContent = '📡 Broadcast';
+            startBtn.classList.remove('is-live');
+            startBtn.onclick = startBroadcast;
+        }
+
+        hideBroadcastBar();
+        leaveBroadcast();
+    }
+});
+
+// ─── RAISE HAND ──────────────────────────────────────────────
+
 socket.on('broadcast-reaction-received', ({ from }) => {
-    // Only show to broadcaster
     if (!isBroadcasting) return;
 
     playChime();
