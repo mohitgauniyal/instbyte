@@ -955,24 +955,43 @@ io.on("connection", (socket) => {
     io.emit("seen-update", { id, count });
   });
 
-  // Broadcast — frame relay
-  socket.on("broadcast-frame", (data) => {
-    if (!currentBroadcast) return;
-    currentBroadcast.lastFrame = data.frame;
-    // relay to everyone except the sender
-    socket.broadcast.emit("broadcast-frame", { frame: data.frame });
-  });
-
-  // Broadcast — viewer joins, send last frame immediately
+  // WebRTC — viewer joins, notify broadcaster to initiate peer connection
   socket.on("broadcast-join", () => {
-    if (!currentBroadcast || !currentBroadcast.lastFrame) return;
-    socket.emit("broadcast-frame", { frame: currentBroadcast.lastFrame });
+    if (!currentBroadcast) return;
+    // tell broadcaster a new viewer has joined, pass viewer's socket id
+    const broadcasterSocket = io.sockets.sockets.get(currentBroadcast.socketId);
+    if (broadcasterSocket) {
+      broadcasterSocket.emit("webrtc-viewer-joined", { viewerId: socket.id });
+    }
   });
 
-  // Broadcast — raise hand, relay only to broadcaster
+  // WebRTC — broadcaster sends offer to a specific viewer
+  socket.on("webrtc-offer", ({ offer, viewerId }) => {
+    const viewerSocket = io.sockets.sockets.get(viewerId);
+    if (viewerSocket) {
+      viewerSocket.emit("webrtc-offer", { offer, broadcasterId: socket.id });
+    }
+  });
+
+  // WebRTC — viewer sends answer back to broadcaster
+  socket.on("webrtc-answer", ({ answer, broadcasterId }) => {
+    const broadcasterSocket = io.sockets.sockets.get(broadcasterId);
+    if (broadcasterSocket) {
+      broadcasterSocket.emit("webrtc-answer", { answer, viewerId: socket.id });
+    }
+  });
+
+  // WebRTC — ICE candidate exchange, both directions
+  socket.on("webrtc-ice", ({ candidate, targetId }) => {
+    const targetSocket = io.sockets.sockets.get(targetId);
+    if (targetSocket) {
+      targetSocket.emit("webrtc-ice", { candidate, fromId: socket.id });
+    }
+  });
+
+  // Broadcast — raise hand, relay to broadcaster
   socket.on("broadcast-reaction", ({ from }) => {
     if (!currentBroadcast) return;
-    // find broadcaster's socket and emit only to them
     io.emit("broadcast-reaction-received", { from });
   });
 
