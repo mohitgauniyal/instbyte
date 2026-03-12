@@ -63,8 +63,16 @@ app.use(helmet({
 
 app.use((req, res, next) => {
   if (req.path === '/upload') return next();
+
+  const ct = req.headers['content-type'] || '';
+
+  if (ct.startsWith('text/plain')) {
+    return express.text({ limit: '10mb' })(req, res, next);
+  }
+
   express.json()(req, res, next);
 });
+
 app.use(cookieParser());
 app.use(requireAuth);
 app.use("/uploads", (req, res, next) => {
@@ -225,19 +233,28 @@ const COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
 const sessions = new Map();
 
 function requireAuth(req, res, next) {
-  if (!config.auth.passphrase) return next(); // no passphrase set, skip
+  if (!config.auth.passphrase) return next();
 
-  // Allow the login route itself through
   if (req.path === "/login" || req.path === "/info" || req.path === "/health") return next();
 
+  // Terminal / API clients — accept passphrase via header
+  const headerPass = req.headers["x-passphrase"];
+  if (headerPass && headerPass === config.auth.passphrase) return next();
 
-  // Check cookie holds a valid session token
+  // Browser clients — check session cookie
   const cookie = req.cookies[COOKIE_NAME];
   if (cookie && sessions.has(cookie)) return next();
 
-  // Not authenticated
   if (req.path.startsWith("/socket.io")) return next();
-  if (req.headers["content-type"] === "application/json" || req.xhr) {
+
+  // Return JSON 401 for any non-browser request
+  const ct = req.headers["content-type"] || "";
+  const isApiRequest = ct.startsWith("application/json") ||
+    ct.startsWith("text/plain") ||
+    req.xhr ||
+    req.headers["x-passphrase"] !== undefined;
+
+  if (isApiRequest) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
@@ -453,9 +470,27 @@ app.use((err, req, res, next) => {
   next(err);
 });
 
-/* TEXT/LINK */
-app.post("/text", dropLimiter, (req, res) => {
-  const { content, channel, uploader } = req.body;
+/* TEXT/LINK — accepts application/json and text/plain */
+function handleTextPost(req, res) {
+  let content, channel, uploader;
+
+  if (req.is("text/plain")) {
+    // Terminal path — body is raw string, metadata comes from headers
+    content = typeof req.body === "string" ? req.body : String(req.body);
+    channel = (req.headers["x-channel"] || "general").trim();
+    uploader = (req.headers["x-uploader"] || "terminal").trim();
+  } else {
+    // Browser / JSON path — existing behaviour unchanged
+    ({ content, channel, uploader } = req.body || {});
+  }
+
+  if (!content || !content.trim()) {
+    return res.status(400).json({ error: "Content is required" });
+  }
+
+  if (!channel) {
+    return res.status(400).json({ error: "Channel is required" });
+  }
 
   const item = {
     type: "text",
@@ -476,7 +511,11 @@ app.post("/text", dropLimiter, (req, res) => {
       res.json(item);
     }
   );
-});
+}
+
+app.post("/text", dropLimiter, handleTextPost);
+app.post("/push", dropLimiter, handleTextPost); // terminal-friendly alias
+
 
 /* DELETE ITEM */
 app.delete("/item/:id", (req, res) => {
