@@ -21,12 +21,13 @@
 npx instbyte
 ```
 
-**Instbyte** is a high-speed, real-time, short-lived LAN sharing utility built for teams and developers who need to move snippets, links, files, and structured notes across devices instantly — without cloud accounts, logins, or external services.
+You're three feet from your teammate. *A quick share* still leaves your building before it reaches them.
 
-It operates entirely on your local network, acting as a lightweight "digital dead-drop" for frictionless collaboration.
+Your chat app is for conversation. Your cloud storage is for files. Your email is for async.
 
-Instbyte can also be fully white-labelled — the difference between ***a tool you use*** and ***a tool you own***.
+None of them are for *right now, on this network, gone tomorrow.*
 
+That's what **Instbyte** is for.
 ---
 
 ## Install & Run
