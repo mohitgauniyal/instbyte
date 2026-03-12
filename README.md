@@ -191,27 +191,11 @@ The difference between *a tool you use* and *a tool you own.*
 
 ## Broadcasting
 
-One person shares their screen — everyone else on the network watches live in their browser. No plugins, no accounts, no external services. Built on WebRTC for smooth, low-latency video.
+One person shares their screen — everyone else on the network watches live in their browser. No plugins, no accounts, no external services. Built on WebRTC.
 
-### How to broadcast
+Viewers can save the current frame to a channel, raise a hand to notify the broadcaster, and toggle audio from the panel.
 
-Click **📡 Broadcast** in the composer. Your browser will ask you to choose a screen, window, or tab to share. Once you pick one, a live bar appears at the top for all connected devices — teammates click **Join** to watch.
-
-While broadcasting you can still use Instbyte normally — send text, drop files, switch channels. The broadcast runs in the background.
-
-To stop, click **⏹ Stop** in the composer or use the browser's built-in "Stop sharing" bar.
-
-### As a viewer
-
-When a broadcast is live, a bar appears at the top of the page. Click **Join** to open the viewer panel. The panel is draggable and resizable — move it anywhere on your screen.
-
-- **📸 Capture** — saves the current frame as an image to the active channel
-- **✋ Raise hand** — notifies the broadcaster with a sound and toast
-- **🔇 / 🔊** — mute and unmute audio
-- **─** — minimize the panel without leaving the broadcast
-- **✕** — leave the broadcast entirely
-
-For HTTPS setup, enabling broadcast for all devices, and advanced network configuration, see the [Deployment Guide](docs/deployment.md#broadcasting).
+For HTTPS setup and advanced network configuration, see the [Deployment Guide](docs/deployment.md#broadcasting).
 
 ---
 
