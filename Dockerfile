@@ -22,4 +22,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 EXPOSE 3000
 
 # Run the server directly — not via instbyte.js (that's the npx bin)
-CMD ["node", "server/server.js"]
+CMD ["npm", "start"]
