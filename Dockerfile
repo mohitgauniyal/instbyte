@@ -12,6 +12,7 @@ COPY . .
 # INSTBYTE_DATA and INSTBYTE_UPLOADS are picked up by db.js and server.js
 ENV INSTBYTE_DATA=/data
 ENV INSTBYTE_UPLOADS=/data/uploads
+ENV INSTBYTE_BOOT=1
 
 # Create the data dir inside image as fallback
 RUN mkdir -p /data/uploads
@@ -22,4 +23,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 EXPOSE 3000
 
 # Run the server directly — not via instbyte.js (that's the npx bin)
-CMD ["npm", "start"]
+CMD ["npm", "run", "server"]

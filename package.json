@@ -15,7 +15,8 @@
     "start": "node bin/instbyte.js",
     "dev": "nodemon bin/instbyte.js",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "server": "node server/server.js"
   },
   "keywords": [
     "lan",
