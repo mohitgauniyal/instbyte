@@ -1076,14 +1076,18 @@ function getLocalIP() {
   return preferred ? preferred.address : "localhost";
 }
 
-function findFreePort(start) {
-  return new Promise((resolve) => {
-    const srv = net.createServer();
-    srv.listen(start, () => {
-      const port = srv.address().port;
-      srv.close(() => resolve(port));
+
+function listenOnFreePort(server, preferredPort) {
+  return new Promise((resolve, reject) => {
+    server.listen(preferredPort, () => resolve(server.address().port));
+    server.on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        server.removeAllListeners('error');
+        listenOnFreePort(server, preferredPort + 1).then(resolve).catch(reject);
+      } else {
+        reject(err);
+      }
     });
-    srv.on("error", () => resolve(findFreePort(start + 1)));
   });
 }
 
@@ -1093,18 +1097,19 @@ const localIP = getLocalIP();
 
 let PORT;
 if (process.env.INSTBYTE_BOOT === '1') {
-  findFreePort(PREFERRED).then(p => {
+  listenOnFreePort(server, PREFERRED).then(p => {
     PORT = p;
-    server.listen(PORT, () => {
-      console.log("\nInstbyte running");
-      console.log("Local:   http://localhost:" + PORT);
-      console.log("Network: http://" + localIP + ":" + PORT);
-      if (PORT !== PREFERRED) {
-        console.log(`(port ${PREFERRED} was busy, switched to ${PORT})`);
-      }
-      console.log("");
-      scanOrphans();
-    });
+    console.log("\nInstbyte running");
+    console.log("Local:   http://localhost:" + PORT);
+    console.log("Network: http://" + localIP + ":" + PORT);
+    if (PORT !== PREFERRED) {
+      console.log(`(port ${PREFERRED} was busy, switched to ${PORT})`);
+    }
+    console.log("");
+    scanOrphans();
+  }).catch(err => {
+    console.error("Failed to start server:", err.message);
+    process.exit(1);
   });
 }
 
