@@ -11,16 +11,24 @@ const fs = require("fs");
 // When run via npx or global install, we want data to live
 // in the user's current working directory, not inside the
 // npm cache or global node_modules.
+//
+// When run via Docker, INSTBYTE_DATA and INSTBYTE_UPLOADS may
+// already be set via environment variables — respect those and
+// don't override them.
 
-const dataDir = path.join(process.cwd(), "instbyte-data");
-const uploadsDir = path.join(dataDir, "uploads");
+if (!process.env.INSTBYTE_DATA) {
+    process.env.INSTBYTE_DATA = path.join(process.cwd(), "instbyte-data");
+}
+
+if (!process.env.INSTBYTE_UPLOADS) {
+    process.env.INSTBYTE_UPLOADS = path.join(process.env.INSTBYTE_DATA, "uploads");
+}
+
+const dataDir = process.env.INSTBYTE_DATA;
+const uploadsDir = process.env.INSTBYTE_UPLOADS;
 
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-
-// Pass locations to the rest of the app via env vars
-process.env.INSTBYTE_DATA = dataDir;
-process.env.INSTBYTE_UPLOADS = uploadsDir;
 
 // ========================
 // BOOT
