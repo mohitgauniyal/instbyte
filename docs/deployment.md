@@ -84,6 +84,18 @@ services:
     restart: unless-stopped
 ```
 
+> **Important:** Create the config file on your host before starting the container — otherwise Docker will create a directory in its place:
+> ```bash
+> touch instbyte.config.json
+> ```
+> If it was already created as a directory by a previous run, remove it first:
+> ```bash
+> rm -rf instbyte.config.json
+> touch instbyte.config.json
+> ```
+> Then edit it with your settings and start the container.
+```
+
 ### Changing the port
 
 Edit the host port in `docker-compose.yml`:
