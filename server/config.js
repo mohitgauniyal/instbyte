@@ -43,12 +43,21 @@ function loadConfig() {
     let userConfig = {};
 
     if (fs.existsSync(configPath)) {
-        try {
-            const raw = fs.readFileSync(configPath, "utf-8");
-            userConfig = JSON.parse(raw);
-            console.log("Config loaded from instbyte.config.json");
-        } catch (e) {
-            console.warn("Warning: instbyte.config.json is invalid JSON, using defaults.");
+        if (fs.statSync(configPath).isDirectory()) {
+            console.error(
+                "Error: instbyte.config.json is a directory, not a file.\n" +
+                "This usually happens in Docker when the config file doesn't exist on the host before the container starts.\n" +
+                "Fix: stop the container, run `rm -rf instbyte.config.json && touch instbyte.config.json`, then start again.\n" +
+                "Using defaults for now."
+            );
+        } else {
+            try {
+                const raw = fs.readFileSync(configPath, "utf-8");
+                userConfig = JSON.parse(raw);
+                console.log("Config loaded from instbyte.config.json");
+            } catch (e) {
+                console.warn("Warning: instbyte.config.json is invalid JSON, using defaults.");
+            }
         }
     }
 
