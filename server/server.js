@@ -19,8 +19,6 @@ const db = require("./db");
 
 const config = require("./config");
 
-let mdns = null;
-try { mdns = require('multicast-dns'); } catch (e) { }
 
 const UPLOADS_DIR = process.env.INSTBYTE_UPLOADS
   || path.join(__dirname, "../uploads");
@@ -1080,62 +1078,6 @@ function getLocalIP() {
 }
 
 
-function getMdnsName() {
-  const appName = config.branding && config.branding.appName;
-  if (appName && appName.toLowerCase() !== 'instbyte') {
-    return appName.toLowerCase().replace(/\s+/g, '-') + '.local';
-  }
-  return 'instbyte.local';
-}
-
-function getHostnameFallback() {
-  return os.hostname().toLowerCase() + '.local';
-}
-
-function probeMdns(name) {
-  return new Promise((resolve) => {
-    if (!mdns) return resolve(false);
-    const m = mdns();
-    const timer = setTimeout(() => {
-      m.destroy();
-      resolve(false); // no response = name is free
-    }, 2000);
-
-    m.on('response', (response) => {
-      const taken = response.answers.some(a =>
-        a.name === name && a.type === 'A'
-      );
-      if (taken) {
-        clearTimeout(timer);
-        m.destroy();
-        resolve(true); // name is taken
-      }
-    });
-
-    m.query({ questions: [{ name, type: 'A' }] });
-  });
-}
-
-function startMdnsAdvertise(name, ip) {
-  if (!mdns) return null;
-  try {
-    const m = mdns();
-    m.on('query', (query) => {
-      query.questions.forEach(q => {
-        if (q.name === name && q.type === 'A') {
-          m.respond({
-            answers: [{ name, type: 'A', ttl: 300, data: ip }]
-          });
-        }
-      });
-    });
-    return m;
-  } catch (e) {
-    return null;
-  }
-}
-
-
 function listenOnFreePort(server, preferredPort) {
   return new Promise((resolve, reject) => {
     server.listen(preferredPort, () => resolve(server.address().port));
@@ -1155,7 +1097,6 @@ const PREFERRED = parseInt(process.env.PORT) || config.server.port;
 const localIP = getLocalIP();
 
 let PORT;
-let mdnsAdvertiser = null;
 
 if (process.env.INSTBYTE_BOOT === '1') {
   listenOnFreePort(server, PREFERRED).then(async p => {
@@ -1165,33 +1106,6 @@ if (process.env.INSTBYTE_BOOT === '1') {
     console.log("Network: http://" + localIP + ":" + PORT);
     if (PORT !== PREFERRED) {
       console.log(`(port ${PREFERRED} was busy, switched to ${PORT})`);
-    }
-
-    // mDNS
-    if (mdns) {
-      try {
-        const preferredName = getMdnsName();
-        const isTaken = await probeMdns(preferredName);
-
-        let mdnsName;
-        if (isTaken) {
-          mdnsName = getHostnameFallback();
-          if (os.platform() !== 'win32') {
-            console.log(`mDNS:    http://${preferredName} already in use on this network`);
-            console.log(`mDNS:    http://${mdnsName}`);
-          }
-        } else {
-          mdnsName = preferredName;
-          if (os.platform() !== 'win32') {
-            console.log(`mDNS:    http://${mdnsName}`);
-          }
-        }
-
-        mdnsAdvertiser = startMdnsAdvertise(mdnsName, localIP);
-
-      } catch (e) {
-        console.log("mDNS:    unavailable on this network — use IP or QR code to join");
-      }
     }
 
     console.log("");
@@ -1210,11 +1124,6 @@ module.exports = { app, server, sessions };
 // ========================
 function shutdown(signal) {
   console.log(`\n${signal} received — shutting down gracefully...`);
-
-  // destroy mDNS advertiser if running
-  if (typeof mdnsAdvertiser !== 'undefined' && mdnsAdvertiser) {
-    try { mdnsAdvertiser.destroy(); } catch (e) { }
-  }
 
   // stop accepting new connections
   server.close(() => {

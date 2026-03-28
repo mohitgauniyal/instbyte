@@ -43,7 +43,6 @@
     "express-rate-limit": "^7.1.5",
     "helmet": "^8.1.0",
     "multer": "^2.0.2",
-    "multicast-dns": "^7.2.5",
     "sharp": "^0.33.2",
     "socket.io": "^4.6.1",
     "sqlite3": "^5.1.6"
