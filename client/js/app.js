@@ -425,6 +425,17 @@ async function togglePreview(id, filename) {
     }
 }
 
+function safeCreateIcons(container) {
+    if (typeof lucide === "undefined") return;
+    requestAnimationFrame(() => {
+        if (container) {
+            lucide.createIcons({ nodes: [container] });
+        } else {
+            lucide.createIcons();
+        }
+    });
+}
+
 function handleRowClick(el, type, value) {
     if (type === "text") {
         navigator.clipboard.writeText(value).then(() => {
@@ -720,11 +731,6 @@ function buildItemEl(i) {
     <div class="preview-panel" id="preview-${i.id}"></div>`;
 
     seenObserver.observe(div);
-    if (typeof lucide !== "undefined") {
-        lucide.createIcons({ nodes: [div] });
-    } else {
-        console.warn("Lucide not yet defined when building item", i.id);
-    }
     return div;
 }
 
@@ -896,18 +902,18 @@ function editContent(id) {
 function render(data) {
     const el = document.getElementById("items");
     el.innerHTML = "";
-
     if (!data.length) {
         el.innerHTML = `<div class="empty-state">Nothing here yet — paste, type, or drop a file to share</div>`;
         return;
     }
-
     data.forEach(i => el.appendChild(buildItemEl(i)));
+    safeCreateIcons(el);
 }
 
 function renderMore(data) {
     const el = document.getElementById("items");
     data.forEach(i => el.appendChild(buildItemEl(i)));
+    safeCreateIcons(el);
 }
 
 function renderGrouped(data) {
@@ -929,12 +935,13 @@ function renderGrouped(data) {
         const section = document.createElement("div");
         section.style.marginTop = "20px";
         section.innerHTML = `
-            <div style="font-size:13px;font-weight:600;color:#6b7280;margin-bottom:8px;">
-                ${ch.toUpperCase()}
-            </div>`;
+        <div style="font-size:13px;font-weight:600;color:#6b7280;margin-bottom:8px;">
+            ${ch.toUpperCase()}
+        </div>`;
         grouped[ch].forEach(i => section.appendChild(buildItemEl(i)));
         el.appendChild(section);
     });
+    safeCreateIcons(el); // once after all sections appended, not inside the loop
 }
 
 async function sendText() {
@@ -1111,7 +1118,7 @@ socket.on("new-item", item => {
             }
         }
 
-        if (typeof lucide !== "undefined") lucide.createIcons({ nodes: [el] });
+        safeCreateIcons(el);
         if (item.uploader !== uploader) playChime();
 
     } else if (item.uploader !== uploader) {
@@ -1378,9 +1385,7 @@ async function uploadFiles(files, overrideChannel) {
 
     status.style.display = "none";
     fileInput.value = "";
-    // Delayed fallback — socket event should have already updated the DOM by now,
-    // but this catches any case where the socket path didn't fire (e.g. network hiccup).
-    setTimeout(() => load(), 500);
+    // socket new-item handles DOM update in real time — no reload needed
 }
 
 
