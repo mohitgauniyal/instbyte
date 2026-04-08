@@ -189,6 +189,8 @@ The difference between *a tool you use* and *a tool you own.*
 
 **Security hardened** — rate limiting on all write endpoints, magic number file validation, filename sanitisation, and forced download for executable file types.
 
+**CLI companion** — `instbyte send`, `instbyte watch`, and `instbyte status` let you push files, pipe command output, sync clipboard, and check server health without opening a browser. Auto-discovers the running server from your working directory.
+
 ---
 
 ## Broadcasting
@@ -220,7 +222,7 @@ For HTTPS setup and advanced network configuration, see the [Deployment Guide](d
 git clone https://github.com/mohitgauniyal/instbyte
 cd instbyte
 npm install
-node server/server.js
+node bin/instbyte.js
 ```
 
 ---
@@ -237,9 +239,19 @@ node server/server.js
 
 ---
 
-## Terminal Usage
+## CLI & Terminal Usage
 
-Push content from your terminal using curl — no browser needed. See [Terminal Usage Guide](docs/terminal-usage.md).
+Send files, pipe command output, watch channels, and check server status from your terminal — no browser needed.
+
+```bash
+instbyte send ./build.zip --channel assets
+instbyte send "http://staging.myapp.com"
+git log --oneline -20 | instbyte send
+instbyte watch --channel projects
+instbyte status
+```
+
+See the [Terminal Usage Guide](docs/terminal-usage.md) for the full CLI reference, CI/CD setup, and raw curl fallback.
 
 ---
 
@@ -253,7 +265,7 @@ Instbyte follows [Semantic Versioning](https://semver.org). See [Releases](https
 
 Instbyte is intentionally lightweight and LAN-first. If you want to extend it — CLI tools, themes, integrations — open an issue or submit a pull request.
 
-The codebase has a full test suite (195 tests across unit and integration). Run `npm test` before submitting anything. Issues tagged **good first issue** are a good starting point.
+The codebase has a full test suite (214 tests across unit and integration). Run `npm test` before submitting anything. Issues tagged **good first issue** are a good starting point.
 
 ---
 
