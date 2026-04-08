@@ -855,7 +855,8 @@ app.get("/health", (req, res) => {
   res.json({
     status: "ok",
     uptime: Math.floor(process.uptime()),
-    version: require("../package.json").version
+    version: require("../package.json").version,
+    connected: connectedUsers
   });
 });
 
