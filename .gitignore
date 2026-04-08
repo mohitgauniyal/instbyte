@@ -4,3 +4,4 @@ db.sqlite
 *.sqlite
 server/db.sqlite
 .env
+instbyte-data/

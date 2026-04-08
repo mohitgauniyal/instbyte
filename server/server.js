@@ -1093,6 +1093,23 @@ function listenOnFreePort(server, preferredPort) {
   });
 }
 
+function writeRuntimeConfig(ip, port) {
+  const dataDir = process.env.INSTBYTE_DATA;
+  if (!dataDir) return;
+
+  const runtimePath = path.join(dataDir, ".runtime.json");
+  const payload = JSON.stringify({
+    url: `http://${ip}:${port}`,
+    passphrase: config.auth.passphrase
+  }, null, 2);
+
+  try {
+    fs.writeFileSync(runtimePath, payload, "utf-8");
+  } catch (e) {
+    console.warn("Warning: could not write CLI runtime config:", e.message);
+  }
+}
+
 const PREFERRED = parseInt(process.env.PORT) || config.server.port;
 
 const localIP = getLocalIP();
@@ -1110,6 +1127,7 @@ if (process.env.INSTBYTE_BOOT === '1') {
     }
 
     console.log("");
+    writeRuntimeConfig(localIP, PORT);
     scanOrphans();
   }).catch(err => {
     console.error("Failed to start server:", err.message);
