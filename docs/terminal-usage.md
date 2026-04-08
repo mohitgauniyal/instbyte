@@ -2,7 +2,42 @@
 
 Instbyte has a first-class CLI for sending, watching, and checking server status — no browser needed.
 
-Replace `192.168.x.x:3000` with the URL shown when Instbyte starts. If you're working in the same directory (or any subdirectory) as where the server was started, the URL is discovered automatically.
+---
+
+## How it fits together
+
+One person starts the server — that's `npx instbyte`, same as always. The CLI commands
+are what everyone else (or other terminals on the same machine) uses to talk to it.
+
+```
+Machine A — runs the server:
+  npx instbyte
+  → Network: http://192.168.29.64:3000
+
+Machine A, another terminal — auto-discovers the server:
+  instbyte send ./build.zip       ← no --server needed
+  instbyte watch
+  instbyte status
+
+Machine B — teammate on the same network:
+  instbyte send ./notes.txt --server http://192.168.29.64:3000
+  instbyte watch --server http://192.168.29.64:3000
+```
+
+**On the server machine:** the CLI discovers the URL automatically from
+`instbyte-data/.runtime.json`, written when the server starts. No flags needed.
+
+**On any other machine:** pass `--server` once per command, or set `INSTBYTE_URL`
+in your shell profile and never type it again:
+
+```bash
+# Add to ~/.bashrc or ~/.zshrc on teammate machines
+export INSTBYTE_URL=http://192.168.29.64:3000
+export INSTBYTE_PASS=myteam   # only if auth is enabled
+```
+
+After that, `instbyte send`, `instbyte watch`, and `instbyte status` just work on
+every terminal on every machine on the network — same as the server machine.
 
 ---
 
