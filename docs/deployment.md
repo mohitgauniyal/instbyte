@@ -11,6 +11,7 @@ pm2 start "npx instbyte" --name instbyte
 pm2 save
 pm2 startup  # generates a command to run — copy and run it to enable boot start
 ```
+---
 
 ### systemd (Linux)
 Create `/etc/systemd/system/instbyte.service`:
@@ -46,7 +47,7 @@ npx instbyte
 
 ---
 
-## Docker
+### Docker
 
 > **_NOTE:_**  Data persists in `./instbyte-data` on your host. The same folder used by `npx instbyte` — so switching between the two preserves all your data.
 
@@ -106,7 +107,7 @@ services:
 
 ---
 
-## Reverse Proxy
+### Reverse Proxy
 
 For teams who want to access Instbyte over HTTPS or from outside their local network, running it behind a reverse proxy is the standard approach.
 
