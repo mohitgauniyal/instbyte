@@ -12,6 +12,8 @@ pm2 save
 pm2 startup  # generates a command to run — copy and run it to enable boot start
 ```
 
+---
+
 ### systemd (Linux)
 Create `/etc/systemd/system/instbyte.service`:
 ```ini
@@ -46,14 +48,24 @@ npx instbyte
 
 ---
 
-## Docker
+### Docker
 
-The fastest way to run Instbyte with Docker:
-```bash
-docker compose up -d
-```
+> **Note:**  Data persists in `./instbyte-data` on your host. The same folder used by `npx instbyte` — so switching between the two preserves all your data.
 
-Or with plain Docker:
+> **Important:** Create the directory and config file on your host before starting the container — otherwise Docker will create a directory in its place:
+> ```bash
+> touch instbyte.config.json
+> ```
+> If it was already created as a directory by a previous run, remove it first:
+> ```bash
+> rm -rf instbyte.config.json
+> touch instbyte.config.json
+> ```
+
+Then use one of the methods below.
+
+### With a run command
+
 ```bash
 docker run -d \
   -p 3000:3000 \
@@ -64,11 +76,7 @@ docker run -d \
   mohitgauniyal/instbyte
 ```
 
-Data persists in `./instbyte-data` on your host. The same folder used by `npx instbyte` — so switching between the two preserves all your data.
-
-### With a config file
-
-Mount your config file into the container:
+### With a docker-compose.yml file
 ```yaml
 services:
   instbyte:
@@ -84,31 +92,19 @@ services:
     restart: unless-stopped
 ```
 
-> **Important:** Create the config file on your host before starting the container — otherwise Docker will create a directory in its place:
-> ```bash
-> touch instbyte.config.json
+> **Note:**  To use a port other than the default (3000) edit the configuration.  Example: using port 1234.
+> ```yaml
+>    ports:
+>      - "1234:3000"
 > ```
-> If it was already created as a directory by a previous run, remove it first:
-> ```bash
-> rm -rf instbyte.config.json
-> touch instbyte.config.json
-> ```
-> Then edit it with your settings and start the container.
-```
 
-### Changing the port
-
-Edit the host port in `docker-compose.yml`:
-```yaml
-ports:
-  - "8080:3000"  # now runs on port 8080
-```
-
-> **Note:** File uploads may not work correctly on Windows Docker Desktop due to network limitations. For Windows, use `npx instbyte` directly or deploy on a Linux server.
+> **Important:** 
+> File uploads may not work correctly on Windows Docker Desktop due to network limitations. 
+> For Windows, use `npx instbyte` directly or deploy on a Linux server.
 
 ---
 
-## Reverse Proxy
+### Reverse Proxy
 
 For teams who want to access Instbyte over HTTPS or from outside their local network, running it behind a reverse proxy is the standard approach.
 
