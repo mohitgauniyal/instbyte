@@ -11,6 +11,7 @@ pm2 start "npx instbyte" --name instbyte
 pm2 save
 pm2 startup  # generates a command to run — copy and run it to enable boot start
 ```
+
 ---
 
 ### systemd (Linux)
@@ -49,7 +50,7 @@ npx instbyte
 
 ### Docker
 
-> **_NOTE:_**  Data persists in `./instbyte-data` on your host. The same folder used by `npx instbyte` — so switching between the two preserves all your data.
+> **Note:**  Data persists in `./instbyte-data` on your host. The same folder used by `npx instbyte` — so switching between the two preserves all your data.
 
 > **Important:** Create the directory and config file on your host before starting the container — otherwise Docker will create a directory in its place:
 > ```bash
@@ -61,7 +62,7 @@ npx instbyte
 > touch instbyte.config.json
 > ```
 
-Then use one of the methods beloww.
+Then use one of the methods below.
 
 ### With a run command
 
@@ -76,10 +77,6 @@ docker run -d \
 ```
 
 ### With a docker-compose.yml file
-
-
-docker-compose.yml
-
 ```yaml
 services:
   instbyte:
@@ -96,10 +93,10 @@ services:
 ```
 
 > **Note:**  To use a port other than the default (3000) edit the configuration.  Example: using port 1234.
-```yaml
-    ports:
-      - "1234:3000"
-```
+> ```yaml
+>    ports:
+>      - "1234:3000"
+> ```
 
 > **Important:** 
 > File uploads may not work correctly on Windows Docker Desktop due to network limitations. 
