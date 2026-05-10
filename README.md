@@ -5,10 +5,17 @@
 <h1 align="center">Instbyte</h1>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/instbyte"><img src="https://img.shields.io/npm/v/instbyte" alt="npm version"></a>
-  <a href="https://github.com/mohitgauniyal/instbyte/blob/main/LICENSE">
-  <img src="https://img.shields.io/github/license/mohitgauniyal/instbyte" alt="license">
-</a>
+  <a href="https://www.npmjs.com/package/instbyte"><img src="https://img.shields.io/npm/v/instbyte?style=flat-square" alt="npm version"></a>
+  <a href="https://github.com/mohitgauniyal/instbyte/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/mohitgauniyal/instbyte/ci.yml?branch=main&style=flat-square&label=build" alt="build status"></a>
+  <a href="https://www.npmjs.com/package/instbyte"><img src="https://img.shields.io/node/v/instbyte?style=flat-square" alt="node version"></a>
+  <a href="https://github.com/mohitgauniyal/instbyte/blob/main/LICENSE"><img src="https://img.shields.io/github/license/mohitgauniyal/instbyte?style=flat-square" alt="license"></a>
+</p>
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/instbyte"><img src="https://img.shields.io/npm/dm/instbyte?style=flat-square" alt="npm downloads"></a>
+  <a href="https://github.com/mohitgauniyal/instbyte/stargazers"><img src="https://img.shields.io/github/stars/mohitgauniyal/instbyte?style=flat-square" alt="stars"></a>
+  <a href="https://github.com/mohitgauniyal/instbyte/issues"><img src="https://img.shields.io/github/issues/mohitgauniyal/instbyte?style=flat-square" alt="issues"></a>
+  <a href="https://github.com/mohitgauniyal/instbyte/commits/main"><img src="https://img.shields.io/github/last-commit/mohitgauniyal/instbyte?style=flat-square" alt="last commit"></a>
 </p>
 
 ---
