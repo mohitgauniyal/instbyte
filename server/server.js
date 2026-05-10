@@ -1072,7 +1072,7 @@ function getLocalIP() {
   const preferred =
     candidates.find(c => c.address.startsWith("192.168.")) ||
     candidates.find(c => c.address.startsWith("10.")) ||
-    candidates.find(c => c.address.startsWith("172.16.")) ||
+    candidates.find(c => c.address.startsWith("172.")) ||
     candidates[0];
 
   return preferred ? preferred.address : "localhost";
