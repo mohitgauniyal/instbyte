@@ -127,6 +127,41 @@ describe('POST /upload', () => {
         expect(res.body.error).toBeDefined()
     })
 
+    it('accepts a valid MP4 whose atom size is not 0x18 or 0x20', async () => {
+        // Regression test: the old check compared bytes 0-3 against fixed atom
+        // sizes (0x18 / 0x20). A real MP4 with any other ftyp box size (here
+        // 0x1c) was wrongly rejected. The signature is the "ftyp" marker at
+        // bytes 4-7 — that's what must be checked.
+        const mp4 = Buffer.concat([
+            Buffer.from([0x00, 0x00, 0x00, 0x1c]), // atom size 28 — previously rejected
+            Buffer.from('ftypisom', 'latin1'),      // ftyp marker + major brand
+            Buffer.from([0x00, 0x00, 0x02, 0x00]),  // minor version
+            Buffer.from('isom', 'latin1'),          // compatible brand
+        ])
+
+        const res = await request(getApp())
+            .post('/upload')
+            .field('channel', 'assets')
+            .field('uploader', 'Alice')
+            .attach('file', mp4, 'clip.mp4')
+
+        expect(res.status).toBe(200)
+        expect(res.body.filename).toMatch(/\.mp4$/)
+    })
+
+    it('rejects an .mp4 file with no ftyp marker', async () => {
+        const notMp4 = Buffer.from([0x00, 0x00, 0x00, 0x1c, 0x00, 0x00, 0x00, 0x00])
+
+        const res = await request(getApp())
+            .post('/upload')
+            .field('channel', 'assets')
+            .field('uploader', 'Alice')
+            .attach('file', notMp4, 'fake.mp4')
+
+        expect(res.status).toBe(400)
+        expect(res.body.error).toMatch(/does not match/i)
+    })
+
     it('can upload an image file', async () => {
         // minimal 1x1 white PNG (valid PNG bytes)
         const png = Buffer.from(

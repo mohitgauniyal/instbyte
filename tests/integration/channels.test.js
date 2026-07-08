@@ -11,6 +11,8 @@
 
 import { describe, it, expect, beforeEach } from 'vitest'
 import request from 'supertest'
+import fs from 'fs'
+import path from 'path'
 import { setup, resetDb, getApp, insertItem, insertChannel } from '../helpers/setup.js'
 
 setup()
@@ -172,6 +174,25 @@ describe('DELETE /channels/:name', () => {
 
         const res = await request(getApp()).get('/items/doomed')
         expect(res.body.items).toHaveLength(0)
+    })
+
+    it('deletes files from the configured uploads dir, not a hardcoded path', async () => {
+        // Regression test for the Docker orphan bug: file cleanup must use the
+        // configured INSTBYTE_UPLOADS dir. Before the fix the handler looked in
+        // server/../uploads, so files in a custom uploads dir were left behind.
+        const uploadsDir = process.env.INSTBYTE_UPLOADS
+        const filename = 'channel-orphan.txt'
+        const filePath = path.join(uploadsDir, filename)
+        fs.writeFileSync(filePath, 'orphan check')
+
+        await request(getApp()).post('/channels').send({ name: 'doomed' })
+        await insertItem({ type: 'file', filename, channel: 'doomed' })
+
+        expect(fs.existsSync(filePath)).toBe(true)
+
+        await request(getApp()).delete('/channels/doomed')
+
+        expect(fs.existsSync(filePath)).toBe(false)
     })
 
     it('returns 404 for a non-existent channel', async () => {
