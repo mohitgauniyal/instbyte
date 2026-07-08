@@ -121,7 +121,8 @@ const MAGIC_NUMBERS = {
   webp: [Buffer.from([0x52, 0x49, 0x46, 0x46])],
   pdf: [Buffer.from([0x25, 0x50, 0x44, 0x46])],
   zip: [Buffer.from([0x50, 0x4B, 0x03, 0x04]), Buffer.from([0x50, 0x4B, 0x05, 0x06])],
-  mp4: [Buffer.from([0x00, 0x00, 0x00, 0x18]), Buffer.from([0x00, 0x00, 0x00, 0x20])],
+  // mp4 is handled separately in checkMagicNumber — its signature is the
+  // "ftyp" marker at bytes 4-7, not a fixed sequence at the start.
 };
 
 // Extension → magic group mapping
@@ -147,18 +148,25 @@ function checkMagicNumber(filePath, ext) {
   const group = EXT_TO_MAGIC[ext.toLowerCase()];
   if (!group) return true; // no check defined for this type — allow through
 
-  const signatures = MAGIC_NUMBERS[group];
-  if (!signatures) return true;
-
+  let buf;
   try {
     const fd = fs.openSync(filePath, 'r');
-    const buf = Buffer.alloc(8);
+    buf = Buffer.alloc(8);
     fs.readSync(fd, buf, 0, 8, 0);
     fs.closeSync(fd);
-    return signatures.some(sig => buf.slice(0, sig.length).equals(sig));
   } catch (e) {
     return false; // can't read → reject
   }
+
+  // MP4: bytes 0-3 are the atom size (which varies between files), so the real
+  // file-type signature is the "ftyp" marker at bytes 4-7. Check that instead.
+  if (group === 'mp4') {
+    return buf.slice(4, 8).toString('latin1') === 'ftyp';
+  }
+
+  const signatures = MAGIC_NUMBERS[group];
+  if (!signatures) return true;
+  return signatures.some(sig => buf.slice(0, sig.length).equals(sig));
 }
 
 function hexToHsl(hex) {
