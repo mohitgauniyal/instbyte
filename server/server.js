@@ -975,9 +975,9 @@ app.get("/logo-dynamic.png", (req, res) => {
 /* ============================
    SOCKET CONNECTION LOGGING
 ============================ */
-// in-memory seen tracking — item id → Set of socket ids
-// resets on server restart, no DB needed
-const seenBy = new Map();
+// in-memory seen tracking — item id → Set of viewer names.
+// Shared with cleanup.js so expired items get purged from it too.
+const seenBy = require("./seen");
 
 // Broadcast state — null when IDLE, populated when LIVE
 let currentBroadcast = null;
