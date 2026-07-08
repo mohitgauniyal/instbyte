@@ -684,7 +684,7 @@ app.delete("/channels/:name", (req, res) => {
       db.all("SELECT * FROM items WHERE channel=?", [name], (err, rows) => {
         rows.forEach(item => {
           if (item.filename) {
-            const filePath = path.join(__dirname, "../uploads", item.filename);
+            const filePath = path.join(UPLOADS_DIR, item.filename);
             if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
           }
         });
