@@ -238,8 +238,34 @@ function buildPalette(hex) {
 const COOKIE_NAME = "instbyte_auth";
 const COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
 
-// Active sessions — token → true. Cleared on restart, which is intentional.
+// Active sessions — token → expiry timestamp (ms). Mirrors the cookie's 7-day
+// lifetime so a session is valid for exactly as long as its cookie. Cleared on
+// restart, which is intentional.
 const sessions = new Map();
+
+// A session is valid only while unexpired. Lazily evicts on access so an
+// expired token is removed the moment it's next presented.
+function isValidSession(token) {
+  if (!token) return false;
+  const expiry = sessions.get(token);
+  if (expiry === undefined) return false;
+  if (Date.now() >= expiry) {
+    sessions.delete(token);
+    return false;
+  }
+  return true;
+}
+
+// Periodic sweep of expired sessions so they don't accumulate on a long-running
+// server even if those tokens are never presented again.
+function sweepSessions() {
+  const now = Date.now();
+  for (const [token, expiry] of sessions) {
+    if (now >= expiry) sessions.delete(token);
+  }
+}
+const sessionSweep = setInterval(sweepSessions, 60 * 60 * 1000); // hourly
+sessionSweep.unref(); // never keep the process alive just for the sweep
 
 // Constant-time comparison for secrets — avoids leaking the passphrase via
 // response timing. Returns false (never throws) for length mismatch or
@@ -263,7 +289,7 @@ function requireAuth(req, res, next) {
 
   // Browser clients — check session cookie
   const cookie = req.cookies[COOKIE_NAME];
-  if (cookie && sessions.has(cookie)) return next();
+  if (isValidSession(cookie)) return next();
 
   if (req.path.startsWith("/socket.io")) return next();
 
@@ -415,7 +441,7 @@ app.post("/login", loginLimiter, (req, res) => {
   const { passphrase } = req.body;
   if (safeEqual(passphrase, config.auth.passphrase)) {
     const token = crypto.randomBytes(32).toString("hex");
-    sessions.set(token, true);
+    sessions.set(token, Date.now() + COOKIE_MAX_AGE); // expiry mirrors the cookie
     res.cookie(COOKIE_NAME, token, {
       maxAge: COOKIE_MAX_AGE,
       httpOnly: true,
@@ -1152,7 +1178,7 @@ if (process.env.INSTBYTE_BOOT === '1') {
   });
 }
 
-module.exports = { app, server, sessions };
+module.exports = { app, server, sessions, sweepSessions };
 
 
 // ========================
