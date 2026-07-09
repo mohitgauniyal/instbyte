@@ -190,6 +190,59 @@ describe('POST /login', () => {
 
         expect(sessions.size).toBe(0)
     })
+
+    it('returns 401 with a wrong passphrase of the same length', async () => {
+        // same length as 'secret123' — exercises the equal-length compare branch
+        const res = await request(getApp())
+            .post('/login')
+            .send({ passphrase: 'secretXYZ' })
+
+        expect(res.status).toBe(401)
+    })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Header passphrase auth (X-Passphrase) — CLI / API clients
+// These lock in the behaviour of the constant-time safeEqual() compare:
+// correct/incorrect must behave exactly like the old === check.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('X-Passphrase header auth', () => {
+    beforeEach(() => {
+        config.auth.passphrase = 'secret123'
+    })
+
+    it('grants access with the correct passphrase header', async () => {
+        const res = await request(getApp())
+            .get('/channels')
+            .set('X-Passphrase', 'secret123')
+        expect(res.status).toBe(200)
+    })
+
+    it('rejects a wrong passphrase of different length', async () => {
+        const res = await request(getApp())
+            .get('/channels')
+            .set('X-Passphrase', 'nope')
+            .set('Content-Type', 'application/json')
+        expect(res.status).toBe(401)
+    })
+
+    it('rejects a wrong passphrase of the SAME length', async () => {
+        // 'secretXYZ' is 9 chars like 'secret123' — exercises the equal-length
+        // timingSafeEqual branch, not just the length short-circuit.
+        const res = await request(getApp())
+            .get('/channels')
+            .set('X-Passphrase', 'secretXYZ')
+            .set('Content-Type', 'application/json')
+        expect(res.status).toBe(401)
+    })
+
+    it('rejects a missing passphrase header', async () => {
+        const res = await request(getApp())
+            .get('/channels')
+            .set('Content-Type', 'application/json')
+        expect(res.status).toBe(401)
+    })
 })
 
 // ─────────────────────────────────────────────────────────────────────────────

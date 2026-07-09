@@ -241,6 +241,17 @@ const COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
 // Active sessions — token → true. Cleared on restart, which is intentional.
 const sessions = new Map();
 
+// Constant-time comparison for secrets — avoids leaking the passphrase via
+// response timing. Returns false (never throws) for length mismatch or
+// non-string input, so behaviour matches a plain === for correct/incorrect.
+function safeEqual(a, b) {
+  if (typeof a !== "string" || typeof b !== "string") return false;
+  const ab = Buffer.from(a);
+  const bb = Buffer.from(b);
+  if (ab.length !== bb.length) return false;
+  return crypto.timingSafeEqual(ab, bb);
+}
+
 function requireAuth(req, res, next) {
   if (!config.auth.passphrase) return next();
 
@@ -248,7 +259,7 @@ function requireAuth(req, res, next) {
 
   // Terminal / API clients — accept passphrase via header
   const headerPass = req.headers["x-passphrase"];
-  if (headerPass && headerPass === config.auth.passphrase) return next();
+  if (safeEqual(headerPass, config.auth.passphrase)) return next();
 
   // Browser clients — check session cookie
   const cookie = req.cookies[COOKIE_NAME];
@@ -402,7 +413,7 @@ app.post("/login", loginLimiter, (req, res) => {
   if (!config.auth.passphrase) return res.redirect("/");
 
   const { passphrase } = req.body;
-  if (passphrase === config.auth.passphrase) {
+  if (safeEqual(passphrase, config.auth.passphrase)) {
     const token = crypto.randomBytes(32).toString("hex");
     sessions.set(token, true);
     res.cookie(COOKIE_NAME, token, {
