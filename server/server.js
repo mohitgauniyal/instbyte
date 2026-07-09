@@ -15,6 +15,7 @@ const { Server } = require("socket.io");
 const multer = require("multer");
 const path = require("path");
 const db = require("./db");
+const { pickLanIP } = require("./netutil");
 
 const config = require("./config");
 
@@ -1090,27 +1091,7 @@ io.on("connection", (socket) => {
 ============================ */
 
 function getLocalIP() {
-  const nets = os.networkInterfaces();
-  const candidates = [];
-
-  for (const name of Object.keys(nets)) {
-    for (const net of nets[name]) {
-      if (net.family !== "IPv4" || net.internal) continue;
-
-      const n = name.toLowerCase();
-      if (/loopback|vmware|virtualbox|vethernet|wsl|hyper|utun|tun|tap|docker|br-|vbox/.test(n)) continue;
-
-      candidates.push({ name, address: net.address });
-    }
-  }
-
-  const preferred =
-    candidates.find(c => c.address.startsWith("192.168.")) ||
-    candidates.find(c => c.address.startsWith("10.")) ||
-    candidates.find(c => c.address.startsWith("172.")) ||
-    candidates[0];
-
-  return preferred ? preferred.address : "localhost";
+  return pickLanIP(os.networkInterfaces());
 }
 
 
