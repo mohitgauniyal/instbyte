@@ -822,7 +822,8 @@ app.get("/info", (req, res) => {
   res.json({
     url: `http://${localIP}:${PORT}`,
     hasAuth: !!config.auth.passphrase,
-    retention: config.storage.retention  // null means "never"
+    retention: config.storage.retention,  // null means "never"
+    iceServers: config.broadcast.iceServers  // WebRTC ICE config for broadcast
   });
 });
 

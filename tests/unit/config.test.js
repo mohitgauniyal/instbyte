@@ -20,6 +20,12 @@ function parseRetention(val) {
     return parseInt(match[1]) * units[match[2].toLowerCase()];
 }
 
+const DEFAULT_ICE = [{ urls: "stun:stun.l.google.com:19302" }];
+function parseIceServers(val) {
+    if (!Array.isArray(val)) return DEFAULT_ICE;
+    return val;
+}
+
 describe('parseFileSize', () => {
     it('parses GB correctly', () => {
         expect(parseFileSize('2GB')).toBe(2 * 1024 ** 3)
@@ -69,5 +75,27 @@ describe('parseRetention', () => {
 
     it('is case insensitive', () => {
         expect(parseRetention('NEVER')).toBeNull()
+    })
+})
+
+describe('parseIceServers', () => {
+    it('returns a custom iceServers array as-is', () => {
+        const custom = [
+            { urls: 'stun:stun.example.com:3478' },
+            { urls: 'turn:turn.example.com:3478', username: 'u', credential: 'p' }
+        ]
+        expect(parseIceServers(custom)).toEqual(custom)
+    })
+
+    it('returns the default when the value is absent', () => {
+        expect(parseIceServers(undefined)).toEqual(DEFAULT_ICE)
+    })
+
+    it('returns the default for a non-array value', () => {
+        expect(parseIceServers('stun:foo')).toEqual(DEFAULT_ICE)
+    })
+
+    it('respects an empty array (air-gapped) — not overridden by the default', () => {
+        expect(parseIceServers([])).toEqual([])
     })
 })

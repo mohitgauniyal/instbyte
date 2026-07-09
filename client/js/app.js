@@ -21,10 +21,12 @@ const peerConnections = new Map();
 let viewerPeerConnection = null;
 let broadcasterId = null;
 
-const STUN_SERVERS = {
+// ICE servers for WebRTC broadcast. Starts with the Google STUN default so
+// broadcast works even if /info can't be reached; init() overrides this with
+// the server-configured list (which may be [] for pure-LAN / air-gapped use).
+let STUN_SERVERS = {
     iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' }
+        { urls: 'stun:stun.l.google.com:19302' }
     ]
 };
 
@@ -2196,6 +2198,12 @@ socket.on('broadcast-reaction-received', ({ from }) => {
         document.getElementById("logoutBtn").style.display = "none";
     }
     retention = info.retention; // null if "never", ms value otherwise
+
+    // Use the server-configured ICE servers. An empty array is respected
+    // (air-gapped: no STUN). Falls back to the default above if absent/malformed.
+    if (Array.isArray(info.iceServers)) {
+        STUN_SERVERS = { iceServers: info.iceServers };
+    }
     await loadChannels();
     load();
 
