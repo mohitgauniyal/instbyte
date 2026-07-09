@@ -33,11 +33,16 @@ setup()
 // These are the exact same references the server uses at runtime.
 let config
 let sessions
+let sweepSessions
+
+// Sessions store an expiry timestamp; this is a comfortably-future one.
+const WEEK = 7 * 24 * 60 * 60 * 1000
 
 beforeEach(async () => {
     await resetDb()
     config = require('../../server/config.js')
     sessions = require('../../server/server.js').sessions
+    sweepSessions = require('../../server/server.js').sweepSessions
     // ensure auth is off before each test — tests that need it turn it on
     config.auth.passphrase = ''
     sessions.clear()
@@ -257,7 +262,7 @@ describe('authenticated requests', () => {
     it('allows access to protected routes with a valid session cookie', async () => {
         // inject a token directly rather than going through login
         const token = 'test-token-abc123'
-        sessions.set(token, true)
+        sessions.set(token, Date.now() + WEEK)
 
         const res = await request(getApp())
             .get('/channels')
@@ -303,7 +308,7 @@ describe('POST /logout', () => {
 
     it('removes the token from the sessions Map', async () => {
         const token = 'logout-test-token'
-        sessions.set(token, true)
+        sessions.set(token, Date.now() + WEEK)
         expect(sessions.size).toBe(1)
 
         await request(getApp())
@@ -315,7 +320,7 @@ describe('POST /logout', () => {
 
     it('after logout the token no longer grants access', async () => {
         const token = 'revoked-token'
-        sessions.set(token, true)
+        sessions.set(token, Date.now() + WEEK)
 
         await request(getApp())
             .post('/logout')
@@ -327,5 +332,63 @@ describe('POST /logout', () => {
             .set('Content-Type', 'application/json')
 
         expect(res.status).toBe(401)
+    })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Session expiry & eviction
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('session expiry', () => {
+    beforeEach(() => {
+        config.auth.passphrase = 'secret123'
+    })
+
+    it('a fresh (unexpired) session authenticates', async () => {
+        const token = 'fresh-token'
+        sessions.set(token, Date.now() + WEEK)
+
+        const res = await request(getApp())
+            .get('/channels')
+            .set('Cookie', `instbyte_auth=${token}`)
+
+        expect(res.status).toBe(200)
+    })
+
+    it('an expired session is rejected AND removed from the Map on access', async () => {
+        const token = 'expired-token'
+        sessions.set(token, Date.now() - 1000) // expired 1s ago
+        expect(sessions.has(token)).toBe(true)
+
+        const res = await request(getApp())
+            .get('/channels')
+            .set('Cookie', `instbyte_auth=${token}`)
+            .set('Content-Type', 'application/json')
+
+        expect(res.status).toBe(401)
+        // lazily evicted on access
+        expect(sessions.has(token)).toBe(false)
+    })
+
+    it('the sweep removes expired sessions but never a still-valid one', async () => {
+        const valid = 'valid-token'
+        const expired = 'expired-token'
+        sessions.set(valid, Date.now() + WEEK)
+        sessions.set(expired, Date.now() - 1000)
+
+        sweepSessions()
+
+        expect(sessions.has(valid)).toBe(true)   // still valid — must survive
+        expect(sessions.has(expired)).toBe(false) // expired — swept
+    })
+
+    it('a session expiring in the far future (7-day cookie lifetime) is not swept', async () => {
+        const token = 'week-token'
+        // exactly the login lifetime — must not be evicted early
+        sessions.set(token, Date.now() + WEEK)
+
+        sweepSessions()
+
+        expect(sessions.has(token)).toBe(true)
     })
 })

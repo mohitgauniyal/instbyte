@@ -18,6 +18,13 @@ const defaults = {
         logoPath: "",
         faviconPath: "",
         primaryColor: "#111827"
+    },
+    broadcast: {
+        // WebRTC ICE servers for screen-broadcast, same shape as
+        // RTCPeerConnection's iceServers. Default is Google's public STUN.
+        // Set to [] to disable STUN entirely for pure-LAN / air-gapped use,
+        // or add TURN entries: [{ urls: "turn:host:3478", username, credential }]
+        iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
     }
 };
 
@@ -36,6 +43,14 @@ function parseRetention(val) {
     const match = String(val).match(/^(\d+)(h|d)$/i);
     if (!match) return defaults.storage.retention;
     return parseInt(match[1]) * units[match[2].toLowerCase()];
+}
+
+function parseIceServers(val) {
+    // Must be an array of RTCPeerConnection iceServer entries. An empty array is
+    // valid and means "no ICE servers" (pure-LAN), so we only fall back to the
+    // default when the value is missing or not an array.
+    if (!Array.isArray(val)) return defaults.broadcast.iceServers;
+    return val;
 }
 
 function loadConfig() {
@@ -66,12 +81,14 @@ function loadConfig() {
         server: { ...defaults.server, ...(userConfig.server || {}) },
         auth: { ...defaults.auth, ...(userConfig.auth || {}) },
         storage: { ...defaults.storage, ...(userConfig.storage || {}) },
-        branding: { ...defaults.branding, ...(userConfig.branding || {}) }
+        branding: { ...defaults.branding, ...(userConfig.branding || {}) },
+        broadcast: { ...defaults.broadcast, ...(userConfig.broadcast || {}) }
     };
 
     // Parse human-readable values like "500MB" or "48h"
     config.storage.maxFileSize = parseFileSize(config.storage.maxFileSize);
     config.storage.retention = parseRetention(config.storage.retention);
+    config.broadcast.iceServers = parseIceServers(config.broadcast.iceServers);
 
     return config;
 }
