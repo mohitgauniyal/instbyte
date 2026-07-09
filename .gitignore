@@ -5,3 +5,5 @@ db.sqlite
 server/db.sqlite
 .env
 instbyte-data/
+instbyte.config.json
+dev-output.log
