@@ -895,12 +895,17 @@ app.post("/broadcast/start", broadcastLimiter, (req, res) => {
     return res.status(400).json({ error: "uploader and channel required" });
   }
 
+  // Owner token is generated server-side and returned only to the starter.
+  // Ending a broadcast requires presenting it, so a non-owner cannot end it.
+  const ownerToken = crypto.randomBytes(24).toString("hex");
+
   currentBroadcast = {
     uploader,
     channel,
     startedAt: Date.now(),
     lastFrame: null,
-    socketId
+    socketId,
+    ownerToken
   };
 
   io.emit("broadcast-started", {
@@ -910,12 +915,24 @@ app.post("/broadcast/start", broadcastLimiter, (req, res) => {
   });
 
   console.log(`Broadcast started by ${uploader}`);
-  res.json({ ok: true, ...currentBroadcast });
+  res.json({
+    ok: true,
+    ownerToken,
+    uploader,
+    channel,
+    startedAt: currentBroadcast.startedAt
+  });
 });
 
 /* POST /broadcast/end */
 app.post("/broadcast/end", (req, res) => {
   if (!currentBroadcast) return res.status(400).json({ error: "No broadcast in progress" });
+
+  // Only the broadcaster (who holds the server-issued owner token) may end it.
+  const token = req.headers["x-broadcast-token"] || (req.body && req.body.ownerToken);
+  if (!token || token !== currentBroadcast.ownerToken) {
+    return res.status(403).json({ error: "Only the broadcaster can end this broadcast" });
+  }
 
   const uploader = currentBroadcast.uploader;
   currentBroadcast = null;

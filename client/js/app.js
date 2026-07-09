@@ -10,6 +10,7 @@ const seenEmitted = new Set(); // item IDs this session has already emitted seen
 let isBroadcasting = false;
 let broadcastStream = null;
 let broadcastChannel = 'general';
+let broadcastOwnerToken = null; // server-issued token proving we own the broadcast
 let audioCtx = null;
 
 // WebRTC — broadcaster maintains one peer connection per viewer
@@ -1761,6 +1762,9 @@ async function startBroadcast() {
         return;
     }
 
+    const startData = await startRes.json();
+    broadcastOwnerToken = startData.ownerToken || null;
+
     broadcastStream = stream;
     isBroadcasting = true;
 
@@ -1804,7 +1808,13 @@ async function stopBroadcast() {
     }
 
     // Best effort — server may already be down
-    try { await fetch('/broadcast/end', { method: 'POST' }); } catch (e) { }
+    try {
+        await fetch('/broadcast/end', {
+            method: 'POST',
+            headers: broadcastOwnerToken ? { 'x-broadcast-token': broadcastOwnerToken } : {}
+        });
+    } catch (e) { }
+    broadcastOwnerToken = null;
 }
 
 // Called when broadcaster gets notified a new viewer joined
