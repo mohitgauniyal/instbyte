@@ -10,6 +10,7 @@ const seenEmitted = new Set(); // item IDs this session has already emitted seen
 let isBroadcasting = false;
 let broadcastStream = null;
 let broadcastChannel = 'general';
+let broadcastOwnerToken = null; // server-issued token proving we own the broadcast
 let audioCtx = null;
 
 // WebRTC — broadcaster maintains one peer connection per viewer
@@ -983,8 +984,13 @@ async function toggleQR() {
         const res = await fetch("/info");
         const { url } = await res.json();
         document.getElementById("qrUrl").innerText = url;
-        document.getElementById("qrImg").src =
-            `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(url)}`;
+
+        // Generate the QR client-side — no network call, works fully offline.
+        const qr = qrcode(0, "M");   // type 0 = auto-size, "M" error correction
+        qr.addData(url);
+        qr.make();
+        document.getElementById("qrImg").src = qr.createDataURL(6, 4);
+
         qrLoaded = true;
     }
 }
@@ -1756,6 +1762,9 @@ async function startBroadcast() {
         return;
     }
 
+    const startData = await startRes.json();
+    broadcastOwnerToken = startData.ownerToken || null;
+
     broadcastStream = stream;
     isBroadcasting = true;
 
@@ -1799,7 +1808,13 @@ async function stopBroadcast() {
     }
 
     // Best effort — server may already be down
-    try { await fetch('/broadcast/end', { method: 'POST' }); } catch (e) { }
+    try {
+        await fetch('/broadcast/end', {
+            method: 'POST',
+            headers: broadcastOwnerToken ? { 'x-broadcast-token': broadcastOwnerToken } : {}
+        });
+    } catch (e) { }
+    broadcastOwnerToken = null;
 }
 
 // Called when broadcaster gets notified a new viewer joined

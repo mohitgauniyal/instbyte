@@ -1,7 +1,6 @@
 require("./cleanup");
 const fs = require("fs");
 const os = require("os");
-const net = require("net");
 const crypto = require("crypto");
 const cookieParser = require("cookie-parser");
 const rateLimit = require("express-rate-limit");
@@ -16,6 +15,7 @@ const { Server } = require("socket.io");
 const multer = require("multer");
 const path = require("path");
 const db = require("./db");
+const { pickLanIP } = require("./netutil");
 
 const config = require("./config");
 
@@ -241,6 +241,17 @@ const COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
 // Active sessions — token → true. Cleared on restart, which is intentional.
 const sessions = new Map();
 
+// Constant-time comparison for secrets — avoids leaking the passphrase via
+// response timing. Returns false (never throws) for length mismatch or
+// non-string input, so behaviour matches a plain === for correct/incorrect.
+function safeEqual(a, b) {
+  if (typeof a !== "string" || typeof b !== "string") return false;
+  const ab = Buffer.from(a);
+  const bb = Buffer.from(b);
+  if (ab.length !== bb.length) return false;
+  return crypto.timingSafeEqual(ab, bb);
+}
+
 function requireAuth(req, res, next) {
   if (!config.auth.passphrase) return next();
 
@@ -248,7 +259,7 @@ function requireAuth(req, res, next) {
 
   // Terminal / API clients — accept passphrase via header
   const headerPass = req.headers["x-passphrase"];
-  if (headerPass && headerPass === config.auth.passphrase) return next();
+  if (safeEqual(headerPass, config.auth.passphrase)) return next();
 
   // Browser clients — check session cookie
   const cookie = req.cookies[COOKIE_NAME];
@@ -402,7 +413,7 @@ app.post("/login", loginLimiter, (req, res) => {
   if (!config.auth.passphrase) return res.redirect("/");
 
   const { passphrase } = req.body;
-  if (passphrase === config.auth.passphrase) {
+  if (safeEqual(passphrase, config.auth.passphrase)) {
     const token = crypto.randomBytes(32).toString("hex");
     sessions.set(token, true);
     res.cookie(COOKIE_NAME, token, {
@@ -749,13 +760,14 @@ app.patch("/item/:id/content", (req, res) => {
   if (content === undefined) return res.status(400).json({ error: "Content required" });
   if (content.trim() === "") return res.status(400).json({ error: "Content cannot be empty" });
 
+  const editedAt = Date.now();
   db.run(
     "UPDATE items SET content=?, edited_at=? WHERE id=? AND type='text'",
-    [content.trim(), Date.now(), id],
+    [content.trim(), editedAt, id],
     function (err) {
       if (err) return res.status(500).json({ error: "Update failed" });
       if (this.changes === 0) return res.status(404).json({ error: "Item not found or not editable" });
-      io.emit("item-updated", { id: parseInt(id), content: content.trim(), edited_at: Date.now() });
+      io.emit("item-updated", { id: parseInt(id), content: content.trim(), edited_at: editedAt });
       res.json({ id, content: content.trim() });
     }
   );
@@ -895,12 +907,16 @@ app.post("/broadcast/start", broadcastLimiter, (req, res) => {
     return res.status(400).json({ error: "uploader and channel required" });
   }
 
+  // Owner token is generated server-side and returned only to the starter.
+  // Ending a broadcast requires presenting it, so a non-owner cannot end it.
+  const ownerToken = crypto.randomBytes(24).toString("hex");
+
   currentBroadcast = {
     uploader,
     channel,
     startedAt: Date.now(),
-    lastFrame: null,
-    socketId
+    socketId,
+    ownerToken
   };
 
   io.emit("broadcast-started", {
@@ -910,12 +926,24 @@ app.post("/broadcast/start", broadcastLimiter, (req, res) => {
   });
 
   console.log(`Broadcast started by ${uploader}`);
-  res.json({ ok: true, ...currentBroadcast });
+  res.json({
+    ok: true,
+    ownerToken,
+    uploader,
+    channel,
+    startedAt: currentBroadcast.startedAt
+  });
 });
 
 /* POST /broadcast/end */
 app.post("/broadcast/end", (req, res) => {
   if (!currentBroadcast) return res.status(400).json({ error: "No broadcast in progress" });
+
+  // Only the broadcaster (who holds the server-issued owner token) may end it.
+  const token = req.headers["x-broadcast-token"] || (req.body && req.body.ownerToken);
+  if (!token || token !== currentBroadcast.ownerToken) {
+    return res.status(403).json({ error: "Only the broadcaster can end this broadcast" });
+  }
 
   const uploader = currentBroadcast.uploader;
   currentBroadcast = null;
@@ -1063,27 +1091,7 @@ io.on("connection", (socket) => {
 ============================ */
 
 function getLocalIP() {
-  const nets = os.networkInterfaces();
-  const candidates = [];
-
-  for (const name of Object.keys(nets)) {
-    for (const net of nets[name]) {
-      if (net.family !== "IPv4" || net.internal) continue;
-
-      const n = name.toLowerCase();
-      if (/loopback|vmware|virtualbox|vethernet|wsl|hyper|utun|tun|tap|docker|br-|vbox/.test(n)) continue;
-
-      candidates.push({ name, address: net.address });
-    }
-  }
-
-  const preferred =
-    candidates.find(c => c.address.startsWith("192.168.")) ||
-    candidates.find(c => c.address.startsWith("10.")) ||
-    candidates.find(c => c.address.startsWith("172.")) ||
-    candidates[0];
-
-  return preferred ? preferred.address : "localhost";
+  return pickLanIP(os.networkInterfaces());
 }
 
 
