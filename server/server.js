@@ -1,7 +1,6 @@
 require("./cleanup");
 const fs = require("fs");
 const os = require("os");
-const net = require("net");
 const crypto = require("crypto");
 const cookieParser = require("cookie-parser");
 const rateLimit = require("express-rate-limit");
@@ -760,13 +759,14 @@ app.patch("/item/:id/content", (req, res) => {
   if (content === undefined) return res.status(400).json({ error: "Content required" });
   if (content.trim() === "") return res.status(400).json({ error: "Content cannot be empty" });
 
+  const editedAt = Date.now();
   db.run(
     "UPDATE items SET content=?, edited_at=? WHERE id=? AND type='text'",
-    [content.trim(), Date.now(), id],
+    [content.trim(), editedAt, id],
     function (err) {
       if (err) return res.status(500).json({ error: "Update failed" });
       if (this.changes === 0) return res.status(404).json({ error: "Item not found or not editable" });
-      io.emit("item-updated", { id: parseInt(id), content: content.trim(), edited_at: Date.now() });
+      io.emit("item-updated", { id: parseInt(id), content: content.trim(), edited_at: editedAt });
       res.json({ id, content: content.trim() });
     }
   );
@@ -914,7 +914,6 @@ app.post("/broadcast/start", broadcastLimiter, (req, res) => {
     uploader,
     channel,
     startedAt: Date.now(),
-    lastFrame: null,
     socketId,
     ownerToken
   };
