@@ -983,8 +983,13 @@ async function toggleQR() {
         const res = await fetch("/info");
         const { url } = await res.json();
         document.getElementById("qrUrl").innerText = url;
-        document.getElementById("qrImg").src =
-            `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(url)}`;
+
+        // Generate the QR client-side — no network call, works fully offline.
+        const qr = qrcode(0, "M");   // type 0 = auto-size, "M" error correction
+        qr.addData(url);
+        qr.make();
+        document.getElementById("qrImg").src = qr.createDataURL(6, 4);
+
         qrLoaded = true;
     }
 }
