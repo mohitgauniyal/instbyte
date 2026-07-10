@@ -1228,6 +1228,12 @@ socket.on("channel-deleted", ({ name }) => {
     highlight();
 });
 
+socket.on("channel-cleared", ({ name }) => {
+    // Someone cleared this channel — reload if we're viewing it. Pinned items
+    // survive on the server, so load() naturally re-renders them.
+    if (channel === name) load();
+});
+
 socket.on("channel-renamed", ({ oldName, newName }) => {
     channels = channels.map(c => c.name === oldName ? { ...c, name: newName } : c);
     if (channel === oldName) channel = newName;
@@ -1521,6 +1527,7 @@ function showChannelMenu(e, ch) {
     </button>
     <div class="menu-divider"></div>
     <button onclick="renameChannelPrompt('${ch.name}')">✎&nbsp; Rename</button>
+    <button onclick="clearChannel('${ch.name}')">🧹&nbsp; Clear channel</button>
     <button class="${ch.pinned ? "muted" : "danger"}"
       ${ch.pinned ? "" : `onclick="deleteChannel('${ch.name}')"`}>
       🗑&nbsp; Delete${ch.pinned ? " (pinned)" : ""}
@@ -1577,6 +1584,22 @@ async function deleteChannel(name) {
     if (!confirmed) return;
 
     const res = await fetch("/channels/" + name, { method: "DELETE" });
+    if (!res.ok) { const err = await res.json(); alert(err.error); }
+}
+
+async function clearChannel(name) {
+    // Ask the server how many unpinned items there are so the confirm is honest.
+    const info = await fetch(`/items/${name}?page=1`).then(r => r.json()).catch(() => null);
+    const count = info ? info.total : 0;
+    if (!count) { alert(`"${name}" has no unpinned items to clear.`); return; }
+
+    const confirmed = confirm(
+        `Clear ${count} item${count === 1 ? "" : "s"} from "${name}"? ` +
+        `Pinned items are kept. This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    const res = await fetch(`/channels/${name}/clear`, { method: "POST" });
     if (!res.ok) { const err = await res.json(); alert(err.error); }
 }
 
