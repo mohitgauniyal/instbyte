@@ -239,7 +239,11 @@ function renderText(text) {
         const html = marked.parse(text);
         const wrap = document.createElement("div");
         wrap.innerHTML = html;
-        wrap.querySelectorAll("pre code").forEach(el => hljs.highlightElement(el));
+        wrap.querySelectorAll("pre code").forEach(el => {
+            const explicit = /language-\w+/.test(el.className);
+            hljs.highlightElement(el);
+            addCodeBadge(el, explicit);
+        });
         return `<div class="markdown-body">${wrap.innerHTML}</div>`;
     }
     // plain text — escape and preserve newlines
@@ -300,6 +304,54 @@ function getLanguage(filename) {
         dockerfile: "dockerfile"
     };
     return map[ext] || "plaintext";
+}
+
+// Human-readable labels for the languages highlight.js can resolve. Anything
+// not listed falls back to a capitalised form of the language id.
+const CODE_LANG_LABELS = {
+    javascript: "JavaScript", typescript: "TypeScript", python: "Python",
+    ruby: "Ruby", php: "PHP", java: "Java", c: "C", cpp: "C++",
+    csharp: "C#", go: "Go", rust: "Rust", swift: "Swift", kotlin: "Kotlin",
+    html: "HTML", xml: "XML", css: "CSS", scss: "SCSS", json: "JSON",
+    yaml: "YAML", toml: "TOML", ini: "INI", bash: "Bash", shell: "Shell",
+    powershell: "PowerShell", sql: "SQL", markdown: "Markdown",
+    dockerfile: "Dockerfile", makefile: "Makefile", diff: "Diff",
+    graphql: "GraphQL", lua: "Lua", perl: "Perl", scala: "Scala",
+    objectivec: "Objective-C", dart: "Dart"
+};
+
+// Minimum highlight.js relevance for an AUTO-DETECTED block to earn a badge.
+// Auto-detection on short snippets is noisy, and a wrong label is worse than
+// none — so we stay conservative. Explicitly-declared languages skip this gate.
+const MIN_BADGE_RELEVANCE = 5;
+
+// Decide the language-badge label for a highlighted code block.
+//   language / relevance — from highlight.js's result on the element
+//   explicit — the language was declared (```lang fence or known file
+//     extension), so we trust it and skip the confidence gate
+// Returns "" when no badge should be shown (unknown / plaintext / low-confidence).
+function codeBadgeLabel(language, relevance, explicit) {
+    if (!language) return "";
+    const lang = String(language).toLowerCase();
+    if (lang === "plaintext" || lang === "plain" || lang === "text") return "";
+    if (!explicit && (typeof relevance !== "number" || relevance < MIN_BADGE_RELEVANCE)) return "";
+    if (lang in CODE_LANG_LABELS) return CODE_LANG_LABELS[lang];
+    return lang.charAt(0).toUpperCase() + lang.slice(1);
+}
+
+// Attach a subtle language badge to a <code> block hljs just highlighted.
+// `explicit` says whether the language was declared rather than auto-detected.
+function addCodeBadge(codeEl, explicit) {
+    const result = codeEl.result || {};
+    const label = codeBadgeLabel(result.language, result.relevance, explicit);
+    if (!label) return;
+    const pre = codeEl.parentElement;
+    if (!pre || pre.tagName !== "PRE" || pre.querySelector(".code-lang-badge")) return;
+    pre.classList.add("has-lang-badge");
+    const badge = document.createElement("span");
+    badge.className = "code-lang-badge";
+    badge.textContent = label;
+    pre.appendChild(badge);
 }
 
 let openPreviewId = null;
@@ -386,7 +438,11 @@ async function togglePreview(id, filename) {
                 wrap.innerHTML = html;
 
                 // syntax highlight any code blocks inside
-                wrap.querySelectorAll("pre code").forEach(el => hljs.highlightElement(el));
+                wrap.querySelectorAll("pre code").forEach(el => {
+            const explicit = /language-\w+/.test(el.className);
+            hljs.highlightElement(el);
+            addCodeBadge(el, explicit);
+        });
 
                 panel.innerHTML = "";
                 panel.appendChild(wrap);
@@ -408,6 +464,7 @@ async function togglePreview(id, filename) {
             const pre = document.createElement("pre");
             pre.appendChild(code);
             hljs.highlightElement(code);
+            addCodeBadge(code, lang !== "plaintext"); // ext-derived language is explicit
 
             panel.innerHTML = "";
             panel.appendChild(pre);

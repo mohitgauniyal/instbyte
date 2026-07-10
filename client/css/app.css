@@ -641,6 +641,28 @@ input[type=text]:focus {
     font-size: 12px;
 }
 
+/* language badge on syntax-highlighted code blocks */
+pre.has-lang-badge {
+    position: relative;
+}
+
+.code-lang-badge {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    font-size: 10px;
+    font-family: ui-monospace, monospace;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    color: #94a3b8;
+    background: rgba(248, 250, 252, 0.85);
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    padding: 2px 6px;
+    pointer-events: none;
+    user-select: none;
+}
+
 .markdown-body a {
     color: #2563eb;
 }
@@ -1908,6 +1930,12 @@ input[type=text]:focus {
             border-color: #2d3148;
         }
 
+        .code-lang-badge {
+            color: #6b7280;
+            background: rgba(15, 17, 23, 0.85);
+            border-color: #2d3148;
+        }
+
         .markdown-body a {
             color: #60a5fa;
         }
@@ -2342,6 +2370,12 @@ input[type=text]:focus {
 
     .markdown-body pre {
         background: #0f1117;
+        border-color: #2d3148;
+    }
+
+    .code-lang-badge {
+        color: #6b7280;
+        background: rgba(15, 17, 23, 0.85);
         border-color: #2d3148;
     }
 
