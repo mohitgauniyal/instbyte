@@ -628,11 +628,11 @@ app.get("/items/:channel", (req, res) => {
               [channel],
               (err, pinned) => {
                 if (err) return res.status(500).json({ error: "DB error" });
-                res.json({ items: [...pinned, ...unpinned], hasMore, page });
+                res.json({ items: [...pinned, ...unpinned], hasMore, page, total: totalUnpinned });
               }
             );
           } else {
-            res.json({ items: unpinned, hasMore, page });
+            res.json({ items: unpinned, hasMore, page, total: totalUnpinned });
           }
         }
       );
@@ -741,6 +741,32 @@ app.delete("/channels/:name", (req, res) => {
           });
         });
       });
+    });
+  });
+});
+
+/* CLEAR CHANNEL — delete every non-pinned item, keep pins */
+app.post("/channels/:name/clear", channelLimiter, (req, res) => {
+  const name = req.params.name;
+
+  // Grab the non-pinned rows first so we can clean up their files, mirroring
+  // the file-cleanup pattern used by single-item and whole-channel delete.
+  db.all("SELECT * FROM items WHERE channel=? AND pinned=0", [name], (err, rows) => {
+    if (err) return res.status(500).json({ error: "DB error" });
+
+    rows.forEach(item => {
+      if (item.filename) {
+        const filePath = path.join(UPLOADS_DIR, item.filename);
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      }
+    });
+
+    db.run("DELETE FROM items WHERE channel=? AND pinned=0", [name], function (err) {
+      if (err) return res.status(500).json({ error: "Clear failed" });
+
+      rows.forEach(item => seenBy.delete(item.id));
+      io.emit("channel-cleared", { name, count: rows.length });
+      res.json({ cleared: rows.length });
     });
   });
 });
