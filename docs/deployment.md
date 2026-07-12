@@ -233,4 +233,19 @@ user=instbyte:yourpassword
 realm=yourdomain.com
 ```
 
-Then update `STUN_SERVERS` in `client/js/app.js` to point to your TURN server.
+Then point Instbyte at your TURN server via the `broadcast.iceServers` option in
+`instbyte.config.json` — no source edits needed:
+
+```json
+{
+  "broadcast": {
+    "iceServers": [
+      { "urls": "stun:stun.l.google.com:19302" },
+      { "urls": "turn:yourdomain.com:3478", "username": "instbyte", "credential": "yourpassword" }
+    ]
+  }
+}
+```
+
+The server exposes this to clients automatically; set it to `[]` for a fully
+air-gapped LAN with no external STUN/TURN.

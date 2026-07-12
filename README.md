@@ -138,6 +138,7 @@ Instbyte works out of the box with zero configuration. All options are optional 
 | `branding.primaryColor` | `"#111827"` | Primary brand color in hex. Full palette auto-derived |
 | `branding.logoPath` | — | Path to your logo file relative to where you run the command |
 | `branding.faviconPath` | — | Path to custom favicon. Auto-generated from logo if omitted |
+| `broadcast.iceServers` | Google STUN | WebRTC ICE servers for screen broadcast. Array of `{ urls, username?, credential? }`. Add TURN entries for cross-subnet/VPS; set to `[]` for air-gapped LANs |
 
 ---
 
@@ -163,7 +164,7 @@ The difference between *a tool you use* and *a tool you own.*
 
 **Real-time sync** — every action is instantly reflected across all connected devices via WebSockets.
 
-**Channels** — organise shared content into named channels. Create, rename, pin, and delete channels on the fly. Pinned channels are protected from accidental deletion.
+**Channels** — organise shared content into named channels. Create, rename, pin, clear, and delete channels on the fly. Clearing removes all items at once while keeping pinned ones; pinned channels are also protected from accidental deletion.
 
 **Rich content** — markdown rendering, syntax highlighting for code, inline image preview, video and audio playback, PDF preview, and text file viewing — all without downloading.
 
